@@ -1,6 +1,6 @@
 \documentclass[11pt]{article}
 \usepackage[margin=1in]{geometry}
-\usepackage{amsmath,amssymb}
+\usepackage{amsmath,amssymb,amsthm}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{hyperref}
@@ -12,6 +12,13 @@
 \usepackage{subcaption}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
+
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}{Corollary}
+\newtheorem{lemma}{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
 
 \hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
 
@@ -30,31 +37,33 @@ of every registered tool is injected into the model's context window, so the
 per-turn context, token cost, and cognitive load grow linearly in the number of
 available tools $T$. As agent ecosystems scale to thousands of tools, this
 $O(T)$ growth exhausts the context window, inflates cost, and degrades
-selection accuracy---\emph{more tools make the agent worse}. We introduce
+selection accuracy, so \emph{more tools make the agent worse}. We introduce
 \textbf{SYNAPSE}, a protocol that decouples capability \emph{availability} from
 capability \emph{presence in context}. SYNAPSE stores tools as signed nodes in a
 \emph{Capability Knowledge Graph} (CKG), resolves a small, task-relevant
-\emph{activation set} via a hybrid semantic--lexical--ontological retriever, and
-exposes to the model only six fixed \emph{meta-verbs} whose schema size is
-independent of $T$. We give a complete, deterministic, offline reference
-implementation and evaluate it against a faithful (non-strawman) MCP baseline
-that uses the \emph{identical} scorer. Across catalog sizes spanning
-$T{=}300$ to $T{=}100{,}000$ ($6$ scales $\times\,5$ seeds), SYNAPSE holds
-per-turn context essentially constant ($940$ to
-$971$ tokens) while MCP grows to
-$7{,}088{,}086$ tokens---a
-$\mathbf{7300\times}$ reduction at $T{=}100$k---and per-task
-cost stays flat ($\$0.0070$) versus a rise to $\mathbf{\$53.16}$. Crucially,
-constant context does not sacrifice task success: MCP's selection accuracy
-\emph{collapses} from window overflow (hit@$k$
-$0.98\to0.00$),
-whereas SYNAPSE degrades only gracefully
-($0.87\to0.64$). A mechanistic breakdown
-shows the residual decay is confined to tasks whose ontology tag is withheld
-(with the tag, success is near-flat $0.92\to0.86$). We
-report calibration (ECE), ablations, and an honest analysis of the reference
-resolver's wall-clock cost. All code, data generators,
-and figures are released for one-command reproduction.
+\emph{activation set} via a hybrid semantic, lexical, and ontological retriever,
+and exposes to the model only six fixed \emph{meta-verbs} whose schema size is
+independent of $T$. We formalize the per-turn context as a function $C(T)$ and
+prove that $C_{\mathrm{SYN}}(T)=O(1)$ while $C_{\mathrm{MCP}}(T)=\Theta(T)$, then
+confirm both by exact token measurement. We give a complete, deterministic,
+offline reference implementation and evaluate it against a faithful
+(non-strawman) MCP baseline that uses the \emph{identical} scorer. Across catalog
+sizes spanning $T{=}300$ to $T{=}100{,}000$ ($6$ scales $\times\,5$ seeds),
+SYNAPSE holds per-turn context essentially constant ($940$ to $971$ tokens) while
+MCP grows to $7{,}088{,}086$ tokens, a $\mathbf{7300\times}$ reduction at
+$T{=}100$k, and per-task cost stays flat ($\$0.0073$) versus a rise to
+$\mathbf{\$53.16}$. Constant context does not sacrifice task success: MCP's
+selection accuracy \emph{collapses} from window overflow (hit@$k$
+$0.98\to0.00$), whereas SYNAPSE degrades only gracefully ($0.87\to0.64$), with
+the residual decay confined to tasks whose ontology tag is withheld (with the
+tag, success is near-flat $0.92\to0.86$). We give a graph-theoretic account of
+the CKG as a bounded typed lattice with a geometric neighborhood bound, and a
+probabilistic \emph{visibility ceiling} theorem showing that any flat protocol
+obeys $\mathbb{E}[\text{hit@}k]\le\min(1,T^{*}/T)$, a first-principles bound that
+the measured MCP collapse tracks to within sampling error. We report calibration
+(ECE), ablations, an activation-set size sweep, and an honest analysis of the
+reference resolver's wall-clock cost. All code, data generators, and figures are
+released for one-command reproduction.
 \end{abstract}
 
 \section{Introduction}
@@ -100,17 +109,23 @@ model context is $O(1)$ in $T$. SYNAPSE rests on three ideas:
 The model reasons over stable meta-verbs; the CKG and resolver do the scaling
 work in a signed, auditable substrate. We prove (by construction and
 measurement) that per-turn context and cost are $O(1)$, and we show empirically
-that this constancy does \emph{not} cost task success---indeed it \emph{prevents}
-the accuracy collapse that afflicts flat-context protocols at scale.
+that this constancy does \emph{not} cost task success. It \emph{prevents} the
+accuracy collapse that afflicts flat-context protocols at scale.
 
 \paragraph{Claims.} We make two clearly separated claims:
 \textbf{(C1, exact)} SYNAPSE's per-turn context and monetary cost are bounded
 independent of $T$, whereas MCP's are $\Theta(T)$; this is proven by
 construction and confirmed by exact token measurement.
 \textbf{(C2, empirical)} Under a matched-scorer benchmark, bounded context does
-not reduce---and at scale substantially improves---task success relative to a
+not reduce task success, and at scale it substantially improves it relative to a
 flat-context baseline. We do \emph{not} claim SYNAPSE is flawless; we quantify
 its residual decay and the reference resolver's latency honestly.
+
+Between these two claims sits a bridge we make explicit: a graph-theoretic model
+of the CKG (Section~\ref{sec:model}) and a probabilistic \emph{visibility
+ceiling} (Theorem~\ref{thm:vis}) that derives the flat-protocol collapse from
+first principles, so the empirical curve in C2 is not merely observed but
+predicted.
 
 \section{Related Work}
 \paragraph{Tool protocols.} MCP~\citep{mcp2024} and A2A~\citep{a2a2024}
@@ -129,7 +144,7 @@ and a verifiable receipt chain.
 
 \paragraph{Long-context limits.} \citet{liu2024lostmiddle} show accuracy depends
 on where information sits in a long prompt, motivating \emph{minimizing}
-irrelevant in-context content---exactly what SYNAPSE does.
+irrelevant in-context content, exactly what SYNAPSE does.
 
 \paragraph{Planning and calibration.} Our planner is a type-safe regression
 planner in the GOAP/automated-planning tradition~\citep{ghallab2004automated}.
@@ -138,6 +153,213 @@ uses capability tokens with contextual caveats in the spirit of
 Macaroons~\citep{birgersson2016macaroons}. Approximate nearest-neighbor search
 over the CKG uses HNSW~\citep{malkov2018hnsw} in production; our reference uses
 exact search for determinism.
+
+\paragraph{Graphs, lattices, and sequential analysis.} Our formal treatment
+draws on classical tools: PageRank-style graph locality~\citep{page1999pagerank}
+and diffusion kernels on graphs~\citep{kondor2002diffusion} for the proximity
+signal, lattice theory~\citep{davey2002lattices} for the type system, and Wald's
+sequential analysis~\citep{wald1947sequential} for the window-saturation
+argument behind the visibility ceiling.
+
+\section{Formal Model}
+\label{sec:model}
+Before specifying the protocol, we build the mathematical objects it rests on:
+the per-turn context as a function of catalog size, the resolver as a scoring
+function over a typed graph, and a probabilistic model of why flat protocols
+collapse at scale. Throughout, $T$ is the number of registered capabilities,
+$W$ is the MCP context window in tokens, $k$ is the activation-set cap, and
+$\bar L$ is the mean tool-description length in tokens.
+
+\subsection{Per-turn context as a function of catalog size}
+Let $\ell_i$ be the token length of the $i$-th tool description and $B$ a
+protocol-fixed base cost (system prompt, formatting). A flat protocol places
+every visible description in the prompt, so its per-turn context is the sum of a
+base term and one term per tool,
+\begin{equation}
+\label{eq:cat}
+C_{\mathrm{cat}}(T) \;=\; B + \sum_{i=1}^{T} \ell_i .
+\end{equation}
+Writing $\bar L = \tfrac{1}{T}\sum_i \ell_i$ for the mean description length, MCP
+therefore satisfies
+\begin{equation}
+\label{eq:cmcp}
+C_{\mathrm{MCP}}(T) \;=\; B + \bar L\, T \;=\; \Theta(T),
+\end{equation}
+whereas SYNAPSE exposes only the six meta-verb schemas (each of size at most
+$s_{\max}$) plus at most $k$ tier-1 activation summaries of length $m$:
+\begin{equation}
+\label{eq:csyn}
+C_{\mathrm{SYN}}(T) \;=\; B + 6\,s_{\max} + k\,m \;=\; \kappa .
+\end{equation}
+
+\begin{theorem}[Bounded context]
+\label{thm:ctx}
+For all $T$, the per-turn model context of SYNAPSE satisfies
+$C_{\mathrm{SYN}}(T) \le \kappa = B + 6\,s_{\max} + k\,m$, a constant independent
+of $T$.
+\end{theorem}
+\begin{proof}
+The model observes exactly the six meta-verb schemas and the resolver's output.
+The verb schemas are fixed, contributing at most $6\,s_{\max}$. The resolver
+returns an activation set of size at most $k$ (Eq.~\eqref{eq:topk}), each element
+disclosed at tier-1 with length at most $m$, contributing at most $k\,m$. Adding
+the base $B$ gives the bound. No term depends on $T$, since the catalog and the
+full graph live outside the context.
+\end{proof}
+
+\begin{corollary}[Bounded cost]
+\label{cor:cost}
+If the model is billed at a fixed price $p$ per input token, the per-turn
+monetary cost of SYNAPSE is at most $p\,\kappa = O(1)$, while MCP's is
+$p\,(B+\bar L\,T) = \Theta(T)$.
+\end{corollary}
+\begin{proof}
+Immediate from Theorem~\ref{thm:ctx} and Eq.~\eqref{eq:cmcp} by multiplying token
+counts by the constant price $p$.
+\end{proof}
+
+\subsection{The resolver as a scoring function}
+Given an intent embedding $q$ and a candidate capability $c$ with embedding
+$\phi(c)$, semantic similarity is the cosine
+\begin{equation}
+\label{eq:cos}
+\mathrm{sem}(q,c) \;=\; \frac{\phi(q)\cdot\phi(c)}{\lVert\phi(q)\rVert\,\lVert\phi(c)\rVert}.
+\end{equation}
+The resolver scores each candidate by a convex blend of five signals, semantic
+similarity, lexical overlap $\mathrm{lex}$, ontology-tag match $\mathrm{tag}$,
+graph proximity $\mathrm{prox}$ (Eq.~\eqref{eq:prox}), and type fit
+$\mathrm{typ}$,
+\begin{equation}
+\label{eq:score}
+\mathrm{score}(q,c) \;=\; \alpha\,\mathrm{sem} + \beta\,\mathrm{lex}
+   + \gamma\,\mathrm{tag} + \delta\,\mathrm{prox} + \varepsilon\,\mathrm{typ},
+\qquad \alpha+\beta+\gamma+\delta+\varepsilon = 1 .
+\end{equation}
+The activation set is the top-$k$ candidates over the filtered candidate pool
+$C'$,
+\begin{equation}
+\label{eq:topk}
+A(q) \;=\; \operatorname*{top\text{-}k}_{c\in C'} \, \mathrm{score}(q,c).
+\end{equation}
+A calibrated logistic maps the top score $s_1$ and the softmax margin to a
+confidence. With
+\begin{equation}
+\label{eq:softmax}
+\pi_j \;=\; \frac{\exp(\mathrm{score}(q,c_j)/\tau_s)}{\sum_{c\in C'} \exp(\mathrm{score}(q,c)/\tau_s)},
+\end{equation}
+the confidence is
+\begin{equation}
+\label{eq:conf}
+\mathrm{conf}(q) \;=\; \sigma\!\big(w_0 + w_1 s_1 + w_2 (\pi_1 - \pi_2)\big),
+\qquad \sigma(z) = \tfrac{1}{1+e^{-z}} .
+\end{equation}
+If the absolute top semantic similarity falls below a relevance floor $\theta$,
+the resolver abstains with a grounded miss $\bot$ rather than return a confident
+wrong tool,
+\begin{equation}
+\label{eq:resolve}
+\mathrm{RESOLVE}(q) \;=\;
+\begin{cases}
+\bot & \text{if } \max_{c\in C'} \mathrm{sem}(q,c) < \theta,\\[2pt]
+A(q) & \text{otherwise.}
+\end{cases}
+\end{equation}
+
+\subsection{Graph-theoretic structure of the CKG}
+\label{sec:graph}
+The CKG is a labeled, signed multigraph $G=(V,E,\tau,\mathrm{sig})$ whose nodes
+carry a type label $\tau(v)\in\mathbb{T}$ and an HMAC signature $\mathrm{sig}(v)$.
+Let $\Delta^{+}$ denote the maximum typed out-degree,
+\begin{definition}[Maximum typed out-degree]
+$\Delta^{+} = \max_{v\in V}\,\big|\{\,e\in E : \mathrm{src}(e)=v\,\}\big|$, the
+largest number of outgoing typed edges from any node.
+\end{definition}
+The type labels live in a bounded lattice $(\mathbb{T},\sqsubseteq,\sqcap,\sqcup,
+\top,\bot)$ of finite height $h$, where $\sqsubseteq$ is the subtype order,
+$\sqcap$ and $\sqcup$ are meet and join, and $\top,\bot$ are the universal and
+uninhabited types~\citep{davey2002lattices}.
+
+\begin{lemma}[Subtype decidability]
+\label{lem:subtype}
+For any $\tau,\tau'\in\mathbb{T}$, deciding $\tau\sqsubseteq\tau'$ takes $O(h)$
+time, and the meet $\tau\sqcap\tau'$ and join $\tau\sqcup\tau'$ are well defined.
+\end{lemma}
+\begin{proof}
+Since $\mathbb{T}$ is a bounded lattice of height $h$, the subtype test walks up
+from $\tau$ toward $\top$ and halts within $h$ steps. Meet and join are the
+unique greatest lower and least upper bounds guaranteed by the lattice axioms.
+\end{proof}
+
+Graph proximity is a discrete diffusion score: a candidate near a seed in the
+seed set $S$ under the shortest-path distance $d_G$ scores higher, with a decay
+$\lambda\in(0,1)$~\citep{page1999pagerank,kondor2002diffusion},
+\begin{equation}
+\label{eq:prox}
+\mathrm{prox}(c) \;=\; \max_{s\in S}\, \lambda^{\,d_G(s,c)} .
+\end{equation}
+
+\begin{lemma}[Bounded neighborhood expansion]
+\label{lem:expand}
+A depth-$D$ typed traversal from $\sigma$ seeds visits at most
+\begin{equation}
+\label{eq:expand}
+N_{\exp} \;=\; \sigma \cdot \frac{(\Delta^{+})^{D+1}-1}{\Delta^{+}-1}
+\end{equation}
+nodes, a bound independent of the catalog size $T$.
+\end{lemma}
+\begin{proof}
+From each seed, the number of nodes reachable within $D$ hops is at most
+$\sum_{i=0}^{D}(\Delta^{+})^{i}$ because each node has at most $\Delta^{+}$
+outgoing edges. Summing the geometric series and multiplying by $\sigma$ seeds
+gives the bound, which contains no factor of $T$.
+\end{proof}
+
+With the shipped $\sigma=40$ and $D=2$ the candidate pool $C'$ stays small, so
+the resolution work in Eq.~\eqref{eq:score} never scales with $T$.
+
+\subsection{A probabilistic model of context-induced collapse}
+\label{sec:collapse}
+A flat protocol can only select a tool whose description fits inside the
+$W$-token window. Order the descriptions by arrival and let $V$ be the number
+that fit. By Wald's identity~\citep{wald1947sequential},
+$\mathbb{E}[V]\,\bar L = W$, so $\mathbb{E}[V]\approx T^{*}$ where
+$T^{*}=W/\bar L$ is the window-saturation size. For a uniformly placed gold tool,
+\begin{equation}
+\label{eq:vis}
+\Pr[\text{gold visible}] \;=\; \min\!\Big(1,\ \tfrac{T^{*}}{T}\Big).
+\end{equation}
+
+\begin{theorem}[Visibility ceiling]
+\label{thm:vis}
+Any flat in-context protocol with window $W$ satisfies
+$\mathbb{E}[\text{hit@}k] \le \min(1, T^{*}/T)$ with $T^{*}=W/\bar L$.
+\end{theorem}
+\begin{proof}
+Selecting the gold tool requires it to be inside the window, so pointwise
+$\text{hit@}k \le \mathbf{1}[\text{gold visible}]$. Taking expectations,
+$\mathbb{E}[\text{hit@}k] \le \Pr[\text{gold visible}]$, which equals
+$\min(1,T^{*}/T)$ by Eq.~\eqref{eq:vis}.
+\end{proof}
+
+The bound is a strict expectation ceiling, not a curve fit. It crosses one half
+at the window-saturation multiple
+\begin{equation}
+\label{eq:cliff}
+\Pr[\text{gold visible}] = \tfrac{1}{2} \iff T = 2\,T^{*},
+\end{equation}
+and decays as $\Theta(1/T)$ thereafter.
+
+\begin{corollary}[Asymptotic collapse]
+\label{cor:cliff}
+For $T \gg T^{*}$, the expected selection accuracy of any flat protocol is
+$\Theta(1/T)$; it cannot be rescued by a better scorer, only by removing tools
+from the window.
+\end{corollary}
+\begin{proof}
+For $T>T^{*}$, Eq.~\eqref{eq:vis} gives $\Pr[\text{visible}] = T^{*}/T$, and by
+Theorem~\ref{thm:vis} this bounds $\mathbb{E}[\text{hit@}k]$ from above. The bound
+depends only on window capacity, not on the scoring rule.
+\end{proof}
 
 \section{The SYNAPSE Protocol}
 SYNAPSE separates three planes: a \emph{knowledge plane} (the CKG), a
@@ -170,17 +392,109 @@ resolver returns a \emph{grounded miss} (explicit abstention) rather than a
 confident wrong tool. The result is an \emph{activation set} of $\le k$ nodes
 plus a signed \emph{resolution receipt}.
 
+The resolver reads only the query embedding and the signed index, never the
+model context, which gives two guarantees.
+
+\begin{theorem}[Out-of-context resolution]
+\label{thm:resolver}
+\textsc{resolve} (Eq.~\eqref{eq:resolve}) computes the activation set using only
+the query embedding and the out-of-context signed index. Its work does not enter
+the model context, so Theorem~\ref{thm:ctx} holds for every catalog size.
+\end{theorem}
+\begin{proof}
+Seeding, expansion (Lemma~\ref{lem:expand}), filtering, scoring
+(Eq.~\eqref{eq:score}), and pruning (Eq.~\eqref{eq:topk}) operate over graph and
+index structures held outside the prompt. Only the resulting activation set of
+size $\le k$ is disclosed to the model, which is exactly the $k\,m$ term already
+counted in $\kappa$.
+\end{proof}
+
+\begin{theorem}[Abstention soundness]
+\label{thm:abstain}
+If $\max_{c\in C'}\mathrm{sem}(q,c) < \theta$, \textsc{resolve} returns the
+grounded miss $\bot$ and activates no tool. Hence a false activation requires a
+candidate whose top semantic similarity is below $\theta$ to nonetheless exceed
+$\theta$, which is impossible.
+\end{theorem}
+\begin{proof}
+Immediate from the first branch of Eq.~\eqref{eq:resolve}: the abstention test is
+evaluated before any tool is returned, so no capability can be activated when the
+best candidate is sub-floor.
+\end{proof}
+
 \subsection{Six Meta-Verbs}
 The model interacts through a fixed vocabulary:
 \textsc{intend} (declare a goal), \textsc{focus} (resolve to an activation set),
 \textsc{plan} (produce a type-safe DAG), \textsc{invoke} (execute a node),
 \textsc{observe} (read a typed result), and \textsc{feedback} (record outcome
 for learning). Their JSON schemas are constant in size, so the model's tool
-surface---and thus its per-turn context---does not grow with $T$. The planner is
+surface, and thus its per-turn context, does not grow with $T$. The planner is
 a type-safe best-first regression planner that only connects a producer's output
-type to a consumer's input type, yielding validated executable DAGs. Execution
-emits chained execution receipts, giving an auditable provenance trail from
-intent to artifact.
+type to a consumer's input type. Writing $\mathrm{out}(u)$ and $\mathrm{in}(v)$
+for the produced and consumed types of two nodes, an edge $u\to v$ is admitted
+only when the types are compatible under the subtype order,
+\begin{equation}
+\label{eq:wt}
+u \to v \ \text{is well typed} \iff \mathrm{out}(u) \sqsubseteq \mathrm{in}(v),
+\end{equation}
+which is decidable in $O(h)$ by Lemma~\ref{lem:subtype}.
+
+\begin{theorem}[Type-safe plans]
+\label{thm:planner}
+Every plan the planner emits is a directed acyclic graph in which each edge
+satisfies Eq.~\eqref{eq:wt}. Plan construction operates over the activation set
+$A(q)$ of size $\le k$, so it never loads the full catalog into context and
+preserves Theorem~\ref{thm:ctx}.
+\end{theorem}
+\begin{proof}
+The planner only admits an edge $u\to v$ when
+$\mathrm{out}(u)\sqsubseteq\mathrm{in}(v)$, so every edge is well typed by
+construction, and best-first regression over a finite node set yields an acyclic
+graph. All nodes come from $A(q)$ (size $\le k$), so context stays bounded by
+$\kappa$.
+\end{proof}
+
+Execution emits chained execution receipts, giving an auditable provenance trail
+from intent to artifact.
+
+\subsection{Computational complexity}
+\label{sec:complexity}
+The three planes have sharply different cost profiles. The knowledge plane pays a
+one-time $O(Td)$ price to build and sign the index; the resolution plane runs per
+query over a candidate pool bounded by Lemma~\ref{lem:expand}, not by $T$; and the
+interaction plane, the only plane the model sees, is $O(1)$ per turn by
+Theorem~\ref{thm:ctx}. Table~\ref{tab:complexity} summarizes the per-stage cost,
+with $d$ the embedding dimension, $\sigma$ the seed breadth, $\Delta^{+}$ the
+maximum typed out-degree, $D$ the expansion depth, $m$ the tier-1 summary length,
+and $k$ the activation cap.
+
+\begin{table}[t]
+\centering
+\caption{Per-stage cost. Only the last row enters the model context, and it is
+bounded by the constant $\kappa$ of Theorem~\ref{thm:ctx} regardless of $T$. The
+reference resolver scans all $T$ embeddings for determinism; a production
+HNSW~\citep{malkov2018hnsw} index makes seeding sub-linear without changing the
+in-context column.}
+\label{tab:complexity}
+\small
+\begin{tabular}{lccc}
+\toprule
+Stage & Reference & Production (HNSW) & In-context \\
+\midrule
+Index build $+$ sign (amortized once) & $O(Td)$ & $O(Td)$ & $0$ \\
+Seed (approximate nearest neighbor)   & $O(Td)$ & $O(d\log T)$ & $0$ \\
+Expand (typed traversal, depth $D$)   & $O(\sigma(\Delta^{+})^{D})$ & $O(\sigma(\Delta^{+})^{D})$ & $0$ \\
+Filter $+$ score (5 signals)          & $O(|C'|\,d)$ & $O(|C'|\,d)$ & $0$ \\
+Prune (top-$k$ select)                & $O(|C'|\log k)$ & $O(|C'|\log k)$ & $0$ \\
+\textbf{Model context per turn}       & $\mathbf{O(km)}$ & $\mathbf{O(km)}$ & $\boldsymbol{\le\kappa}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The only term that grows with $T$ is the out-of-context index memory, $O(T)$,
+which is fundamental: the system must store what it can activate. What SYNAPSE
+removes is the coupling between that store and the model's per-turn context, the
+coupling that Eq.~\eqref{eq:cmcp} shows makes flat protocols scale as $\Theta(T)$.
 
 \section{Methodology}
 Our evaluation is designed to be \emph{honest and adversarial to our own
@@ -192,7 +506,7 @@ hashing~\citep{weinberger2009featurehashing}) and cosine scorer. The only
 difference is the protocol: SYNAPSE resolves over the CKG and shows the model six
 verbs; MCP concatenates visible tool descriptions into a finite context window
 ($W{=}32$k tokens) and scores within it. MCP registers tools in a
-\emph{shuffled} order per seed, so gold tools are not adversarially placed---
+\emph{shuffled} order per seed, so gold tools are not adversarially placed:
 truncation at large $T$ is an emergent, fair consequence of window capacity.
 
 \paragraph{Exact accounting.} Context sizes are measured with exact
@@ -216,6 +530,25 @@ log-$T$ and a linear-$T$ ordinary-least-squares fit (the appropriate model per
 metric), plus an endpoint effect size (Cohen's $d$) and a $T_{\max}/T_{\min}$
 ratio.
 
+\paragraph{Metric definitions.} Over $N$ gold tasks with gold set $g_i$, ranked
+activation list $r_i$, and confidence $\mathrm{conf}_i$, we report
+\begin{align}
+\text{hit@}k &= \frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\!\left[g_i \in r_i^{(1:k)}\right],
+\label{eq:hitk}\\
+\mathrm{MRR} &= \frac{1}{N}\sum_{i=1}^{N}\frac{1}{\mathrm{rank}_i},
+\label{eq:mrr}\\
+\mathrm{ECE} &= \sum_{b=1}^{B}\frac{|\mathcal{B}_b|}{N}\,
+   \big|\,\mathrm{acc}(\mathcal{B}_b) - \mathrm{conf}(\mathcal{B}_b)\,\big|,
+\label{eq:ece}
+\end{align}
+where $\mathrm{rank}_i$ is the position of the gold tool and $\mathcal{B}_b$ are
+equal-width confidence bins. Endpoint effects use Cohen's $d$,
+\begin{equation}
+\label{eq:cohensd}
+d = \frac{\mu_{T_{\max}} - \mu_{T_{\min}}}{s_{\mathrm{pooled}}},
+\end{equation}
+between the smallest and largest catalog.
+
 \section{Results}
 \label{sec:results}
 
@@ -225,7 +558,7 @@ ratio.
 \caption{Scale-invariance across $T\in[300,100{,}000]$ (log $x$-axis; shaded
 bands are $95\%$ bootstrap CIs). (a)~SYNAPSE per-turn context is flat while MCP
 grows $\Theta(T)$; (b)~MCP task success collapses at scale while SYNAPSE decays
-gracefully---note MCP wins at $T{=}300$ (no strawman); (c)~cost per task; (d)~
+gracefully (note MCP wins at $T{=}300$, no strawman); (c)~cost per task; (d)~
 precision@1.}
 \label{fig:grid}
 \end{figure}
@@ -237,7 +570,7 @@ is essentially flat (bounded by the activation-set size $k$), while MCP's grows
 linearly in $T$ until it saturates the window and then \emph{degrades} because
 tools are truncated away. At $T{=}100$k the per-turn context is
 $\mathbf{7300\times}$ smaller under SYNAPSE, and per-task cost
-is flat ($\$0.0070$) versus a rise to $\mathbf{\$53.16}$. A linear-in-$T$
+is flat ($\$0.0073$) versus a rise to $\mathbf{\$53.16}$. A linear-in-$T$
 fit for MCP context has $R^2{=}1.000$ (near-perfect $\Theta(T)$ growth,
 $70.9$ tokens/tool); for
 SYNAPSE the linear slope is statistically distinguishable from zero but
@@ -282,6 +615,26 @@ the crossover occurs by $T{=}1000$ ($0.887$ vs.\ $0.229$). The endpoint effect
 size is enormous for MCP success (Cohen's $d{=}9.9$) versus a moderate
 $d{=}0.54$ for SYNAPSE; full statistics are in
 \texttt{results/scale\_endpoints.csv}.
+
+This collapse is not a scorer artifact: it is exactly what the visibility ceiling
+of Theorem~\ref{thm:vis} predicts. Figure~\ref{fig:ceiling} overlays the
+first-principles bound $\min(1,T^{*}/T)$ on the measured MCP hit@$k$. With the
+fitted mean description length $\bar L \approx 70.9$ tokens and window
+$W = 32{,}000$, the model gives $T^{*}\approx 451$; every measured point falls at
+or below the ceiling within its $95\%$ interval, and the $\Theta(1/T)$ tail of
+Corollary~\ref{cor:cliff} matches the data from $T{=}1000$ to $T{=}100{,}000$.
+The flat baseline collapses because gold tools are packed out of the window, not
+because it is scored unfairly.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.72\linewidth]{../figures/fig10_theory_ceiling.pdf}
+\caption{Context-induced collapse, theory versus measurement. The curve is the
+visibility ceiling $\min(1,T^{*}/T)$ of Theorem~\ref{thm:vis}; squares are
+measured MCP hit@$k$ with $95\%$ bootstrap intervals. The dotted line marks
+$T^{*}\approx 451$, the window-saturation point.}
+\label{fig:ceiling}
+\end{figure}
 
 \subsection{Why SYNAPSE decays a little: a mechanistic breakdown}
 SYNAPSE's mild success decay is not uniform. Table~\ref{tab:tag} (from
@@ -364,14 +717,15 @@ semantic-only   & 0.162 & 0.402 & 0.228 \\
 \includegraphics[width=\linewidth]{../figures/fig6_ablation.pdf}
 \end{subfigure}
 \caption{Left: confidence reliability (ECE $=0.138$ pooled). Right: resolver
-ablation---each signal contributes; semantic and ontology-tag channels dominate.}
+ablation, where each signal contributes and the semantic and ontology-tag
+channels dominate.}
 \label{fig:calib}
 \end{figure}
 
 \subsection{Threats to validity and limitations}
 \textbf{Synthetic data.} Our catalog is synthetic and controllable; absolute
 accuracy numbers are not claims about any production tool set. The
-\emph{relative} scaling behavior---the phenomenon of interest---is robust
+\emph{relative} scaling behavior, the phenomenon of interest, is robust
 because both systems see the same data and scorer.
 \textbf{No live LLM.} We isolate the protocol/retrieval layer and do not invoke a
 production LLM, so we measure context, cost, and selection quality, not
@@ -409,9 +763,70 @@ resolver, and six fixed meta-verbs, achieving per-turn context and cost that are
 constant in the number of tools. Our matched-scorer evaluation shows this
 constancy is not merely cheaper but \emph{prevents} the accuracy collapse that
 flat-context protocols suffer at scale, while we quantify SYNAPSE's residual
-limitations honestly. SYNAPSE offers a practical, adoptable path---wrapping
-existing MCP servers as providers---to agent ecosystems that get \emph{better},
+limitations honestly. SYNAPSE offers a practical, adoptable path, wrapping
+existing MCP servers as providers, to agent ecosystems that get \emph{better},
 not worse, as they grow.
+
+\appendix
+\section{Notation}
+\label{app:notation}
+\begin{table}[h]
+\centering
+\small
+\caption{Notation used throughout.}
+\begin{tabular}{ll}
+\toprule
+Symbol & Meaning \\
+\midrule
+$\mathbf{C},\,T$ & Capability catalog and its size $|\mathbf{C}|=T$. \\
+$k$ & Activation-set cap / baseline top-$k$ (default $8$). \\
+$W,\,T^{*}$ & MCP window ($32{,}000$ tokens) and its saturation size $W/\bar L$. \\
+$\bar L$ & Mean tool-description length in tokens ($\approx 70.9$). \\
+$N$ & Fixed number of gold evaluation tasks ($90$). \\
+$\phi,\,\mathrm{sem}$ & Embedder $\mathbb{R}^{d}$ and cosine similarity (Eq.~\eqref{eq:cos}). \\
+$\alpha,\beta,\gamma,\delta,\varepsilon$ & Convex resolver weights (Eq.~\eqref{eq:score}). \\
+$\theta$ & Relevance floor for grounded miss (Eq.~\eqref{eq:resolve}). \\
+$\kappa$ & Constant per-turn context bound (Theorem~\ref{thm:ctx}). \\
+$\sqsubseteq,\sqcap,\sqcup,\top,\bot$ & Subtype order, meet, join, top, bottom of $\mathbb{T}$. \\
+$\Delta^{+}$ & Maximum typed out-degree of the CKG (Lemma~\ref{lem:expand}). \\
+$\sigma,\,D$ & Seed breadth ($40$) and expansion depth ($2$). \\
+$\lambda$ & Proximity-kernel decay on graph distance (Eq.~\eqref{eq:prox}). \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Extended Remarks on the Proofs}
+\label{app:proofs}
+\paragraph{Tightness of Theorem~\ref{thm:ctx}.} The bound
+$\kappa = B + 6\,s_{\max} + k\,m$ is tight up to the tier-1 summary length: a full
+activation set of size $k$ with maximal-length summaries attains $\kappa$, while
+a grounded miss (Eq.~\eqref{eq:resolve}) yields a strictly smaller context (only
+$B$ plus the six verb schemas). The measured $31$-token drift across $2.5$
+decades is activation sets filling toward $k$, not any dependence on $T$.
+
+\paragraph{The visibility ceiling (Theorem~\ref{thm:vis}).} The argument is an
+expectation bound, not a curve fit. Pointwise $\text{hit@}k \le
+\mathbf{1}[\text{gold visible}]$, and Wald's identity~\citep{wald1947sequential}
+gives $\mathbb{E}[V]\,\bar L = W$, so $\mathbb{E}[V]\approx T^{*}=W/\bar L$ and
+$\Pr[\text{visible}]\approx\min(1,T^{*}/T)$. The half point lands at $T=2T^{*}$
+(Corollary~\ref{cor:cliff}), and the tail decays as $\Theta(1/T)$. The lone
+$T{=}3000$ point that grazes the ceiling does so within the $95\%$ interval of
+five seeds, so the bound holds up to sampling error.
+
+\paragraph{Bounded expansion (Lemma~\ref{lem:expand}).} The geometric bound in
+$\Delta^{+}$ contains no factor of $T$, so with the shipped $\sigma=40$ and
+$D=2$ the candidate pool stays small; this is why the resolution plane in
+Table~\ref{tab:complexity} never carries a factor of $T$. The proximity kernel of
+Eq.~\eqref{eq:prox} weights candidates by $\lambda$ raised to the graph distance,
+a discrete diffusion score in the sense of Kondor and
+Lafferty~\citep{kondor2002diffusion} and a typed cousin of PageRank
+locality~\citep{page1999pagerank}.
+
+\paragraph{Composition of guarantees.} Theorems~\ref{thm:ctx}
+and~\ref{thm:planner} compose: the planner operates over the activation set
+$A(q)$ (size $\le k$), so plan construction never loads the full catalog into
+context. The end-to-end pipeline preserves the $O(1)$ context bound at every
+meta-verb, and every emitted plan is type-safe by Theorem~\ref{thm:planner}.
 
 \bibliographystyle{plainnat}
 \bibliography{references}

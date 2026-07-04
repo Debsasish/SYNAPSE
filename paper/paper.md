@@ -1,6 +1,6 @@
 # SYNAPSE: Scale-Invariant Capability Activation for LLM Agents via a Capability Knowledge Graph
 
-*SYNAPSE Working Group — reference implementation & reproducible artifact*
+*Debasish Tripathy. Reference implementation and reproducible artifact.*
 
 > This is the readable companion to `paper.tex` (journal-ready LaTeX). Every
 > number below is measured by the code in this repository and can be regenerated

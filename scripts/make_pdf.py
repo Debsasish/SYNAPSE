@@ -188,7 +188,7 @@ def build(out_path):
     s.append(Paragraph(
         "SYNAPSE: Scale-Invariant Capability Activation for Large Language "
         "Model Agents via a Capability Knowledge Graph", S["title"]))
-    s.append(Paragraph("SYNAPSE Working Group", S["author"]))
+    s.append(Paragraph("Debasish Tripathy", S["author"]))
     s.append(Paragraph("Reference implementation and reproducible research artifact &nbsp;&middot;&nbsp; 2026", S["author"]))
     s.append(Paragraph(
         "<b>Keywords:</b> large language model agents &middot; tool use &middot; "
@@ -963,7 +963,7 @@ def build(out_path):
         topMargin=0.8 * inch, bottomMargin=0.7 * inch,
         leftMargin=0.85 * inch, rightMargin=0.85 * inch,
         title="SYNAPSE: Scale-Invariant Capability Activation for LLM Agents",
-        author="SYNAPSE Working Group",
+        author="Debasish Tripathy",
     )
 
     def _footer(canvas, d):
@@ -971,7 +971,7 @@ def build(out_path):
         canvas.setFont("DjSans", 7.5)
         canvas.setFillColor(colors.HexColor("#888888"))
         canvas.drawCentredString(letter[0] / 2, 0.42 * inch,
-                                 f"SYNAPSE Working Group  \u00b7  reproducible artifact  \u00b7  page {d.page}")
+                                 f"Debasish Tripathy  \u00b7  reproducible artifact  \u00b7  page {d.page}")
         canvas.restoreState()
 
     doc.build(s, onFirstPage=_footer, onLaterPages=_footer)

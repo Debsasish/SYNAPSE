@@ -9,7 +9,7 @@ description = "SYNAPSE: scale-invariant capability activation for LLM agents via
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
-authors = [{ name = "SYNAPSE Working Group" }]
+authors = [{ name = "Debasish Tripathy" }]
 keywords = ["llm", "agents", "tool-use", "mcp", "a2a", "knowledge-graph", "protocol"]
 classifiers = [
   "Programming Language :: Python :: 3",

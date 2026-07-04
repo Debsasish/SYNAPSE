@@ -113,7 +113,7 @@ synapse-research/
 ## Citation
 
 See [`CITATION.cff`](CITATION.cff). If you use this artifact, please cite the
-SYNAPSE Working Group technical report (2026).
+Debasish Tripathy technical report (2026).
 
 ## License
 

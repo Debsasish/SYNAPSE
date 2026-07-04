@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SYNAPSE — Scale-Invariant Capability Activation for LLM Agents</title>
+<meta name="description" content="SYNAPSE is a protocol that decouples capability availability from context presence, giving LLM agents O(1) per-turn context instead of the O(T) growth that makes MCP and A2A worse as they scale." />
+<meta property="og:title" content="SYNAPSE: Scale-Invariant Capability Activation for LLM Agents" />
+<meta property="og:description" content="More tools should not make an agent worse. SYNAPSE keeps per-turn context constant while flat protocols collapse." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<canvas id="graph-bg" aria-hidden="true"></canvas>
+
+<!-- ================= NAV ================= -->
+<header id="nav">
+  <a class="brand" href="#home">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-text">SYNAPSE</span>
+  </a>
+  <nav class="nav-links">
+    <a href="#problem">Problem</a>
+    <a href="#results">Results</a>
+    <a href="#approach">Approach</a>
+    <a href="#theory">Theory</a>
+    <a href="#code">Code</a>
+    <a href="#cite">Cite</a>
+  </nav>
+  <a class="nav-cta" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">GitHub ↗</a>
+  <button id="menu-toggle" aria-label="Toggle menu">☰</button>
+</header>
+
+<!-- ================= HERO ================= -->
+<section id="home" class="hero">
+  <div class="hero-inner reveal">
+    <div class="tagline-pill">A new protocol for tool-augmented LLM agents</div>
+    <h1 class="hero-title">
+      <span class="grad">SYNAPSE</span>
+    </h1>
+    <p class="hero-sub">Scale-Invariant Capability Activation for Large Language Model Agents via a Capability Knowledge Graph</p>
+    <p class="hero-author">Debasish Tripathy</p>
+    <p class="hero-lede">
+      Today's agent protocols inject every tool description into the model's context, so
+      per-turn cost grows <em>linearly</em> with the number of tools. More tools make the agent
+      <em>worse</em>. SYNAPSE breaks that coupling: capabilities live in a signed knowledge graph,
+      the model only ever sees six fixed verbs, and per-turn context stays <strong>constant</strong>.
+    </p>
+    <div class="hero-buttons">
+      <a class="btn btn-primary" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener">
+        <span class="btn-ico">📄</span> Read the Paper
+      </a>
+      <a class="btn" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">
+        <span class="btn-ico">⌥</span> Source Code
+      </a>
+      <a class="btn" href="#cite">
+        <span class="btn-ico">❝</span> Cite
+      </a>
+    </div>
+  </div>
+
+  <div class="hero-stats reveal">
+    <div class="stat">
+      <div class="stat-num"><span class="count" data-target="7300" data-suffix="&times;">0</span></div>
+      <div class="stat-label">less context at T=100k</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">O(1)</div>
+      <div class="stat-label">context vs MCP's &Theta;(T)</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num">$<span class="count" data-target="53" data-suffix="">0</span></div>
+      <div class="stat-label">MCP cost/task vs $0.007</div>
+    </div>
+    <div class="stat">
+      <div class="stat-num"><span class="count" data-target="6" data-suffix="">0</span></div>
+      <div class="stat-label">fixed meta-verbs, any T</div>
+    </div>
+  </div>
+  <div class="scroll-hint" aria-hidden="true">scroll</div>
+</section>
+
+<!-- ================= PROBLEM ================= -->
+<section id="problem" class="section">
+  <div class="section-head reveal">
+    <span class="eyebrow">The scaling paradox</span>
+    <h2>Flat protocols get worse as they grow</h2>
+    <p class="section-lede">
+      MCP and A2A present every registered tool in-context on every turn. That is an O(T) tax in
+      the number of tools T. Beyond the context window, the right tools get truncated away and
+      selection accuracy collapses. This is structural, not a tuning problem.
+    </p>
+  </div>
+  <div class="problem-grid">
+    <div class="prob-card reveal">
+      <div class="prob-ico">🧱</div>
+      <h3>Context exhaustion</h3>
+      <p>Thousands of tool schemas overflow even long windows and evict the task-relevant content.</p>
+    </div>
+    <div class="prob-card reveal">
+      <div class="prob-ico">💸</div>
+      <h3>Cost inflation</h3>
+      <p>Every turn re-pays for every tool's tokens. Cost scales with catalog size, not task difficulty.</p>
+    </div>
+    <div class="prob-card reveal">
+      <div class="prob-ico">📉</div>
+      <h3>Accuracy collapse</h3>
+      <p>Larger prompts dilute attention and add near-duplicate distractors, so selection quality falls.</p>
+    </div>
+  </div>
+  <div class="compare reveal">
+    <div class="compare-row compare-head">
+      <span>At T = 100,000 tools</span><span>MCP (flat)</span><span>SYNAPSE</span>
+    </div>
+    <div class="compare-row">
+      <span>Per-turn context</span><span class="bad">7,088,086 tok</span><span class="good">971 tok</span>
+    </div>
+    <div class="compare-row">
+      <span>Cost per task</span><span class="bad">$53.16</span><span class="good">$0.0073</span>
+    </div>
+    <div class="compare-row">
+      <span>Selection accuracy (hit@k)</span><span class="bad">0.00</span><span class="good">0.64</span>
+    </div>
+    <div class="compare-row">
+      <span>Growth in T</span><span class="bad">&Theta;(T)</span><span class="good">O(1)</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RESULTS ================= -->
+<section id="results" class="section">
+  <div class="section-head reveal">
+    <span class="eyebrow">Measured, not modeled</span>
+    <h2>Results across 6 scales &times; 5 seeds</h2>
+    <p class="section-lede">
+      A faithful, matched-scorer MCP baseline (identical embedder and cosine scorer, no strawman)
+      across T = 300 to 100,000. Every number is regenerated from seed by one command. Click any
+      figure to enlarge.
+    </p>
+  </div>
+
+  <div class="gallery">
+    <figure class="fig-card reveal" data-full="assets/figures/fig5_scale_invariance_grid.png">
+      <img loading="lazy" src="assets/figures/fig5_scale_invariance_grid.png" alt="Scale-invariance grid" />
+      <figcaption>Scale-invariance overview: context, success, cost, precision@1.</figcaption>
+    </figure>
+    <figure class="fig-card reveal" data-full="assets/figures/fig1_context_per_turn.png">
+      <img loading="lazy" src="assets/figures/fig1_context_per_turn.png" alt="Per-turn context vs T" />
+      <figcaption>SYNAPSE context is flat; MCP grows &Theta;(T).</figcaption>
+    </figure>
+    <figure class="fig-card reveal" data-full="assets/figures/fig2_success_rate.png">
+      <img loading="lazy" src="assets/figures/fig2_success_rate.png" alt="Success rate vs T" />
+      <figcaption>MCP success collapses at scale; SYNAPSE decays gracefully.</figcaption>
+    </figure>
+    <figure class="fig-card reveal" data-full="assets/figures/fig10_theory_ceiling.png">
+      <img loading="lazy" src="assets/figures/fig10_theory_ceiling.png" alt="Visibility ceiling theory vs measurement" />
+      <figcaption>Theory vs measurement: the visibility-ceiling bound predicts the collapse.</figcaption>
+    </figure>
+    <figure class="fig-card reveal" data-full="assets/figures/fig3_cost_per_task.png">
+      <img loading="lazy" src="assets/figures/fig3_cost_per_task.png" alt="Cost per task vs T" />
+      <figcaption>Cost per task: flat for SYNAPSE, rising to $53 for MCP.</figcaption>
+    </figure>
+    <figure class="fig-card reveal" data-full="assets/figures/fig9_tag_breakdown.png">
+      <img loading="lazy" src="assets/figures/fig9_tag_breakdown.png" alt="Tag availability breakdown" />
+      <figcaption>Residual decay localizes to the tag-dropout subset.</figcaption>
+    </figure>
+    <figure class="fig-card reveal" data-full="assets/figures/fig6_ablation.png">
+      <img loading="lazy" src="assets/figures/fig6_ablation.png" alt="Resolver ablations" />
+      <figcaption>Every resolver signal contributes; semantic and tag channels dominate.</figcaption>
+    </figure>
+    <figure class="fig-card reveal" data-full="assets/figures/fig7_reliability.png">
+      <img loading="lazy" src="assets/figures/fig7_reliability.png" alt="Confidence reliability" />
+      <figcaption>Confidence calibration (pooled ECE = 0.138).</figcaption>
+    </figure>
+    <figure class="fig-card reveal" data-full="assets/figures/fig8_k_sweep.png">
+      <img loading="lazy" src="assets/figures/fig8_k_sweep.png" alt="Activation-set size sweep" />
+      <figcaption>Activation-set size k trades context for recall.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= APPROACH ================= -->
+<section id="approach" class="section">
+  <div class="section-head reveal">
+    <span class="eyebrow">How it works</span>
+    <h2>Three planes, one bounded interface</h2>
+    <p class="section-lede">
+      SYNAPSE separates a knowledge plane, a resolution plane, and an interaction plane. Only the
+      interaction plane ever touches the model context, and its size never depends on T.
+    </p>
+  </div>
+  <div class="plane-grid">
+    <div class="plane-card reveal">
+      <div class="plane-num">01</div>
+      <h3>Capability Knowledge Graph</h3>
+      <p>
+        Tools, types, providers, and concepts are typed, HMAC-signed nodes with typed edges, stored
+        <em>outside</em> the model context. The store refuses to index a node whose signature does not
+        verify, giving tamper-evidence and supply-chain integrity.
+      </p>
+      <ul class="plane-list">
+        <li>Bounded type lattice with subtype order</li>
+        <li>Geometric neighborhood bound, no factor of T</li>
+        <li>Tiered disclosure: compact tier-1 vs full tier-3</li>
+      </ul>
+    </div>
+    <div class="plane-card reveal">
+      <div class="plane-num">02</div>
+      <h3>Hybrid Resolver</h3>
+      <p>
+        Maps an intent to a small activation set of at most k capabilities using five signals:
+        semantic, lexical, ontology-tag, graph-proximity, and type-fit. It runs entirely out of
+        context and returns a calibrated confidence.
+      </p>
+      <ul class="plane-list">
+        <li>Convex blend of five scoring signals</li>
+        <li>Grounded-miss abstention below a relevance floor</li>
+        <li>Signed, chainable resolution receipts</li>
+      </ul>
+    </div>
+    <div class="plane-card reveal">
+      <div class="plane-num">03</div>
+      <h3>Six Meta-Verbs</h3>
+      <p>
+        The only tool surface the model sees. Their JSON schemas are constant in size, so the model's
+        per-turn context does not grow with the catalog. Everything scalable happens beneath them.
+      </p>
+      <div class="verbs">
+        <span>intend</span><span>focus</span><span>plan</span>
+        <span>invoke</span><span>observe</span><span>feedback</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= THEORY ================= -->
+<section id="theory" class="section">
+  <div class="section-head reveal">
+    <span class="eyebrow">Why the collapse is inevitable</span>
+    <h2>The visibility ceiling</h2>
+    <p class="section-lede">
+      The flat-protocol collapse is not a scorer artifact. It follows from first principles: a tool
+      can only be selected if its description fits inside the window. We derive a strict expectation
+      bound and the measured curve tracks it to within sampling error.
+    </p>
+  </div>
+  <div class="theory-wrap">
+    <div class="theorem reveal">
+      <div class="theorem-tag">Theorem 2 &middot; Visibility ceiling</div>
+      <div class="math-block" data-tex="\mathbb{E}[\text{hit@}k] \;\le\; \min\!\left(1,\ \frac{T^{*}}{T}\right), \qquad T^{*} = \frac{W}{\bar L}"></div>
+      <p>
+        With window W = 32,000 tokens and mean description length L&#772; &asymp; 70.9, the saturation
+        point is T* &asymp; 451. Beyond it, expected accuracy decays as &Theta;(1/T) and cannot be
+        rescued by a better scorer, only by removing tools from the window.
+      </p>
+    </div>
+    <div class="theory-cards">
+      <div class="tcard reveal">
+        <div class="math-inline" data-tex="C_{\mathrm{MCP}}(T) = B + \bar L\,T = \Theta(T)"></div>
+        <p>Flat protocols pay one token term per tool, every turn.</p>
+      </div>
+      <div class="tcard reveal">
+        <div class="math-inline" data-tex="C_{\mathrm{SYN}}(T) = B + 6\,s_{\max} + k\,m = \kappa"></div>
+        <p>SYNAPSE context is a constant &kappa;, independent of T.</p>
+      </div>
+      <div class="tcard reveal">
+        <div class="math-inline" data-tex="N_{\exp} = \sigma\cdot\frac{(\Delta^{+})^{D+1}-1}{\Delta^{+}-1}"></div>
+        <p>Neighborhood expansion is geometric in out-degree, never in T.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CODE ================= -->
+<section id="code" class="section">
+  <div class="section-head reveal">
+    <span class="eyebrow">Real, runnable code</span>
+    <h2>The six verbs are the whole surface</h2>
+    <p class="section-lede">
+      A complete, deterministic, offline reference implementation. Below is the actual meta-verb
+      interface and a minimal session.
+    </p>
+  </div>
+  <div class="code-tabs reveal">
+    <div class="tab-bar" role="tablist">
+      <button class="tab active" data-tab="t1">metaverbs.py</button>
+      <button class="tab" data-tab="t2">usage.py</button>
+      <button class="tab" data-tab="t3">run_all.py</button>
+    </div>
+    <div class="tab-panel active" id="t1">
+<pre><code class="language-python"># The only tool schemas the model ever sees. Fixed size, independent of T.
+META_VERB_SCHEMAS = [
+    {"name": "intend",  "description": "State a goal; receive a small ranked "
+                                       "set of relevant capabilities."},
+    {"name": "focus",   "description": "Expand full detail for one capability id."},
+    {"name": "plan",    "description": "Compute a type-safe executable DAG."},
+    {"name": "invoke",  "description": "Execute a capability or plan; get a "
+                                       "signed receipt."},
+    {"name": "observe", "description": "Query working memory for prior results."},
+    {"name": "feedback","description": "Report usefulness; update edge weights."},
+]
+
+class SynapseSession:
+    """A stateful session exposing exactly the six meta-verbs."""
+
+    def intend(self, goal, tags=None, **constraints):
+        # Resolve OUTSIDE the model: returns an activation set of <= k tools.
+        return self.resolver.resolve(goal=goal, tags=tags or [], **constraints)
+
+    def plan(self, goal_type=None, goal_effect=None):
+        # Type-safe regression planner over the activated subgraph only.
+        activated = [it.id for it in self._last_activation.nodes]
+        return self.planner.plan(activated=activated, goal_type=goal_type)
+</code></pre>
+    </div>
+    <div class="tab-panel" id="t2">
+<pre><code class="language-python">from synapse import build_ckg, SynapseSession
+
+# 1. Load 100,000 tools into the signed knowledge graph (out of context).
+ckg = build_ckg(catalog)
+
+# 2. The model only ever sees six verbs, regardless of catalog size.
+session = SynapseSession(ckg)
+
+# 3. State an intent -> a small, bounded activation set comes back.
+activation = session.intend("scan a repo for SQL injection", tags=["cwe:89"])
+for node in activation.nodes:
+    print(node.id, node.summary, f"conf={node.confidence:.2f}")
+
+# 4. Plan a type-safe DAG and execute it with a signed receipt.
+plan = session.plan(goal_effect="report")
+result = session.invoke(plan=plan)
+print(result.receipt.receipt_id)   # auditable provenance, intent -> artifact
+</code></pre>
+    </div>
+    <div class="tab-panel" id="t3">
+<pre><code class="language-bash"># One command regenerates every number, table, and figure from seed.
+python run_all.py
+
+# Deterministic and offline. No API keys, no network, no hidden state.
+# Outputs: results/*.csv, figures/*.pdf, paper/SYNAPSE.pdf
+</code></pre>
+    </div>
+  </div>
+</section>
+
+<!-- ================= REPRODUCE ================= -->
+<section id="reproduce" class="section reproduce">
+  <div class="repro-inner reveal">
+    <h2>Fully reproducible</h2>
+    <p>
+      The artifact is deterministic and offline. A single command regenerates every result, and
+      12 conformance tests encode the protocol's normative requirements, several of which are direct
+      empirical checks of the theorems.
+    </p>
+    <div class="repro-badges">
+      <span class="rb">Deterministic</span>
+      <span class="rb">Offline</span>
+      <span class="rb">12 conformance tests</span>
+      <span class="rb">MIT licensed</span>
+      <span class="rb">Exact cl100k tokenization</span>
+    </div>
+  </div>
+</section>
+
+<!-- ================= CITE ================= -->
+<section id="cite" class="section">
+  <div class="section-head reveal">
+    <span class="eyebrow">Use this work</span>
+    <h2>Citation</h2>
+  </div>
+  <div class="cite-box reveal">
+    <button class="copy-btn" data-copy="bibtex">Copy</button>
+<pre id="bibtex"><code>@article{tripathy2026synapse,
+  title   = {SYNAPSE: Scale-Invariant Capability Activation for Large
+             Language Model Agents via a Capability Knowledge Graph},
+  author  = {Tripathy, Debasish},
+  year    = {2026},
+  url     = {https://github.com/Debsasish/SYNAPSE}
+}</code></pre>
+  </div>
+  <div class="cite-links reveal">
+    <a class="btn btn-primary" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener">Download PDF (20 pp)</a>
+    <a class="btn" href="assets/SYNAPSE-latex.pdf" target="_blank" rel="noopener">LaTeX build (15 pp)</a>
+    <a class="btn" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">GitHub Repository</a>
+  </div>
+</section>
+
+<footer>
+  <div class="foot-inner">
+    <div>
+      <span class="brand-text">SYNAPSE</span>
+      <p>Scale-invariant capability activation for LLM agents.</p>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">GitHub</a>
+      <a href="assets/SYNAPSE.pdf" target="_blank" rel="noopener">Paper</a>
+      <a href="#home">Top</a>
+    </div>
+  </div>
+  <p class="copyright">&copy; 2026 Debasish Tripathy &middot; MIT License</p>
+</footer>
+
+<!-- Lightbox -->
+<div id="lightbox" aria-hidden="true">
+  <img id="lightbox-img" src="" alt="Enlarged figure" />
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

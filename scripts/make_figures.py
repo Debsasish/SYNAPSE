@@ -205,6 +205,40 @@ def fig_tag_breakdown():
     _save(fig, "fig9_tag_breakdown")
 
 
+def fig_theory_ceiling(agg):
+    """Predicted visibility ceiling min(1, T*/T) vs measured MCP hit@k.
+
+    Grounds Theorem 2 (visibility ceiling): a flat in-context protocol can only
+    select a tool whose description fits inside the W-token window, so expected
+    accuracy is bounded by the probability the gold tool is visible.
+    """
+    W = 32000.0  # MCP_WINDOW_TOKENS (benchmarks/config.py)
+    LBAR = 70.9  # mean tool-description length (linear-T fit slope; matches paper text)
+    rows = sorted([r for r in agg if r["system"] == "MCP"], key=lambda r: float(r["T"]))
+    T = np.array([float(r["T"]) for r in rows])
+    ceiling = np.minimum(1.0, (W / LBAR) / T)
+    meas = np.array([float(r["success_mean"]) for r in rows])
+    lo = np.array([float(r["success_lo"]) for r in rows])
+    hi = np.array([float(r["success_hi"]) for r in rows])
+    tg = np.logspace(np.log10(T.min()), np.log10(T.max()), 240)
+    ceil_g = np.minimum(1.0, (W / LBAR) / tg)
+    fig, ax = plt.subplots(figsize=(5.6, 3.9))
+    ax.plot(tg, ceil_g, "-", color="#2166ac",
+            label=r"predicted ceiling $\min(1,\,T^{*}/T)$")
+    ax.errorbar(T, meas, yerr=[meas - lo, hi - meas], fmt="s", color=MCP_COLOR,
+                capsize=3, markersize=6, label="measured MCP hit@k", zorder=3)
+    tstar = W / LBAR
+    ax.axvline(tstar, ls=":", color="gray", alpha=0.7)
+    ax.text(tstar * 1.05, 0.9, r"$T^{*}\approx%d$" % round(tstar), fontsize=9, color="gray")
+    ax.set_xscale("log")
+    ax.set_ylim(-0.03, 1.06)
+    ax.set_xlabel("Catalog size $T$ (capabilities)")
+    ax.set_ylabel("Selection accuracy (hit@k)")
+    ax.set_title("Context-induced collapse: theory vs measurement")
+    ax.legend()
+    _save(fig, "fig10_theory_ceiling")
+
+
 def main():
     agg = _read("scale_agg.csv")
     fig_context(agg)
@@ -212,6 +246,7 @@ def main():
     fig_cost(agg)
     fig_latency(agg)
     fig_combined(agg)
+    fig_theory_ceiling(agg)
     fig_ablation()
     fig_reliability()
     fig_ksweep()

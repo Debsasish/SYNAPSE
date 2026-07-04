@@ -204,20 +204,20 @@ def build(out_path):
         "to connect to external capabilities. These protocols share a structural "
         "flaw: the description of every registered tool is injected into the model's "
         "context window, so per-turn context, token cost, and cognitive load grow "
-        "linearly in the number of available tools T&mdash;<i>more tools make the "
+        "linearly in the number of available tools T, so <i>more tools make the "
         "agent worse</i>. We introduce <b>SYNAPSE</b>, a protocol that decouples "
         "capability <i>availability</i> from capability <i>presence in context</i>. "
         "SYNAPSE stores tools as signed nodes in a <i>Capability Knowledge Graph</i> "
         "(CKG), resolves a small task-relevant <i>activation set</i> via a hybrid "
-        "semantic&ndash;lexical&ndash;ontological retriever, and exposes only six "
+        "semantic, lexical, and ontological retriever, and exposes only six "
         "fixed <i>meta-verbs</i> whose schema size is independent of T. We formalize "
         "the per-turn context as a function C(T) and prove that C<sub>SYN</sub>(T) = "
         "O(1) while C<sub>MCP</sub>(T) = &#920;(T), then confirm both by exact token "
         "measurement. Against a faithful, matched-scorer MCP baseline across T=300 to "
         "100,000 (6 scales &times; 5 seeds), SYNAPSE holds per-turn context "
-        "essentially constant (940&ndash;971 tokens) while MCP grows to 7,088,086 "
-        "tokens&mdash;a <b>7,300&times;</b> reduction at T=100k&mdash;and per-task "
-        "cost stays flat ($0.0073) versus a rise to <b>$53.16</b>. Constant context "
+        "essentially constant (940 to 971 tokens) while MCP grows to 7,088,086 "
+        "tokens (a <b>7,300&times;</b> reduction at T=100k). Per-task "
+        "cost stays flat ($0.0073) against a rise to <b>$53.16</b>. Constant context "
         "does not sacrifice success: MCP's selection accuracy collapses from window "
         "overflow (hit@k 0.98&rarr;0.00), whereas SYNAPSE decays only gracefully "
         "(0.87&rarr;0.64), with the residual decay confined to tasks whose ontology "
@@ -266,9 +266,9 @@ def build(out_path):
     s.append(_bullets([
         "<b>(C1, exact).</b> SYNAPSE's per-turn context and monetary cost are "
         "bounded independent of T, whereas MCP's are &#920;(T); we prove this "
-        "(Theorems 1&ndash;2) and confirm it by exact token measurement.",
+        "(Theorems 1 and 2) and confirm it by exact token measurement.",
         "<b>(C2, empirical).</b> Under a matched-scorer benchmark, bounded context "
-        "does not reduce&mdash;and at scale substantially improves&mdash;task success "
+        "does not reduce task success, and at scale it substantially improves it "
         "relative to a flat-context baseline. We do <i>not</i> claim SYNAPSE is "
         "flawless; we quantify its residual decay and the reference resolver's "
         "latency honestly.",
@@ -288,7 +288,7 @@ def build(out_path):
         "<b>Tool protocols.</b> MCP [1] and A2A [2] standardize tool exposure and "
         "agent messaging respectively, but both place tool descriptions in-context. "
         "SYNAPSE is complementary rather than competitive: it can wrap existing MCP "
-        "servers as CKG providers while removing the &#920;(T) context tax, giving an "
+        "servers as CKG providers while removing the &#920;(T) context tax. This gives an "
         "incremental adoption path.", S["body"]))
     s.append(Paragraph(
         "<b>Tool learning and retrieval.</b> Toolformer [4] teaches models to call "
@@ -302,7 +302,7 @@ def build(out_path):
     s.append(Paragraph(
         "<b>Long-context limits.</b> Liu et al. [7] show that model accuracy depends "
         "strongly on where relevant information sits within a long prompt, and "
-        "degrades when distractors crowd the window&mdash;motivating the "
+        "degrades when distractors crowd the window. This motivates the "
         "<i>minimization</i> of irrelevant in-context content that SYNAPSE performs by "
         "construction.", S["body"]))
     s.append(Paragraph(
@@ -353,7 +353,7 @@ def build(out_path):
     s.append(Paragraph(
         "Below saturation (T &#8804; T&#42;) the context grows linearly in T; above it "
         "the sum is clamped at W, but then only a W-token prefix of tools remains "
-        "visible and the rest are truncated away&mdash;so recall of any tool beyond the "
+        "visible and the rest are truncated away, so recall of any tool beyond the "
         "prefix is structurally zero. SYNAPSE instead injects a fixed base prompt of "
         "B tokens, the schemas of a constant verb set V (|V| = 6), and the tier-1 "
         "summaries of an activation set A(q) whose size is capped at k:", S["body"]))
@@ -430,7 +430,7 @@ def build(out_path):
 
     s.append(Paragraph("4.2&nbsp;&nbsp;Hybrid resolver", S["h2"]))
     s.append(Paragraph(
-        "Given an intent q the resolver runs five stages&mdash;<i>seed</i>, "
+        "Given an intent q the resolver runs five stages: <i>seed</i>, "
         "<i>expand</i>, <i>filter</i>, <i>score</i>, <i>prune</i>. Seeding forms a "
         "candidate set from approximate nearest neighbors and lexical/tag matches, "
         "C<sub>0</sub>(q) = ANN(q) &#8746; Lex(q) &#8746; Tag(q); expansion adds typed "
@@ -460,7 +460,7 @@ def build(out_path):
     _eq(s, S, "conf(q) = &sigma;( w<sub>0</sub> + w<sub>1</sub> s&#42;(q) + "
               "w<sub>2</sub> m(q) ),&nbsp;&nbsp; &sigma;(z) = 1 / (1 + e<super>&minus;z</super>).", 8)
     s.append(Paragraph(
-        "Crucially, abstention is gated on the <i>absolute</i> fit rather than a "
+        "Abstention is gated on the <i>absolute</i> fit rather than a "
         "relative margin, which prevents confident errors when many hard negatives "
         "crowd the neighborhood. With relevance floor &theta; = 0.45 the resolver "
         "emits a <i>grounded miss</i> &#8869; when no capability is semantically close "
@@ -543,8 +543,8 @@ def build(out_path):
         "only difference is the protocol: SYNAPSE resolves over the CKG and shows the "
         "model six verbs; MCP concatenates visible tool descriptions into a finite "
         "window (W = 32,000 tokens) and scores within it. MCP registers tools in a "
-        "<i>shuffled</i> order per seed, so gold tools are not adversarially placed&mdash;"
-        "truncation at large T is an emergent, fair consequence of Eq. (3), not of "
+        "<i>shuffled</i> order per seed, so gold tools are not adversarially placed. "
+        "Truncation at large T is a fair, emergent consequence of Eq. (3), not of "
         "hostile ordering.", S["body"]))
     s.append(Paragraph("5.2&nbsp;&nbsp;Synthetic catalog and task suite", S["h2"]))
     s.append(Paragraph(
@@ -555,8 +555,8 @@ def build(out_path):
         "scale rather than to a changing task set. Tasks include single- and two-step "
         "plans and deliberate <i>miss</i> tasks (no correct tool exists) to test the "
         "abstention rule of Eq. (9). To avoid a ceiling, the eval suite applies three "
-        "perturbations to each task&mdash;paraphrase, tag-dropout (the ontology tag is "
-        "withheld, forcing pure-semantic fallback), and lexical noise.", S["body"]))
+        "perturbations to each task: paraphrase, tag-dropout (the ontology tag is "
+        "withheld, which forces a pure-semantic fallback), and lexical noise.", S["body"]))
 
     s.append(Paragraph("5.3&nbsp;&nbsp;Evaluation metrics (formal)", S["h2"]))
     s.append(Paragraph(
@@ -588,8 +588,8 @@ def build(out_path):
               "&nbsp;&nbsp; s<sub>p</sub> = &#8730;[ ((n<sub>1</sub>&minus;1)s<sub>1</sub><super>2</super> "
               "+ (n<sub>2</sub>&minus;1)s<sub>2</sub><super>2</super>) / (n<sub>1</sub>+n<sub>2</sub>&minus;2) ].", 14)
     s.append(Paragraph(
-        "Growth is characterized by ordinary least squares under two models&mdash;"
-        "linear in T (y = a + bT) and linear in log&#8321;&#8320;T&mdash;choosing the "
+        "Growth is characterized by ordinary least squares under two models: "
+        "linear in T (y = a + bT) and linear in log&#8321;&#8320;T. We choose the "
         "correct one per metric. For slope b we report the t-statistic t = b / SE(b) "
         "with n&minus;2 degrees of freedom, its p-value, and the coefficient of "
         "determination", S["body"]))
@@ -620,7 +620,7 @@ def build(out_path):
          "<b>Figure 1.</b> Scale-invariance across T &#8712; [300, 100,000] (log "
          "x-axis; shaded bands are 95% bootstrap CIs). (a) SYNAPSE per-turn context is "
          "flat while MCP grows &#920;(T); (b) MCP success collapses while SYNAPSE "
-         "decays gracefully&mdash;MCP wins at T=300 (no strawman); (c) cost/task; (d) "
+         "decays gracefully, and MCP wins at T=300 (no strawman); (c) cost/task; (d) "
          "precision@1.", S, s)
 
     s.append(Paragraph("6.1&nbsp;&nbsp;Context and cost are O(1) vs &#920;(T) (C1)", S["h2"]))
@@ -649,8 +649,8 @@ def build(out_path):
         "MCP context is linear in T (linear-T fit R&sup2; = 1.000, &#8776; 70.9 "
         "tokens/tool), an empirical confirmation of the &#920;(T) term in Eq. (3). "
         "SYNAPSE context rises only 31 tokens across 2.5 decades (the activation set "
-        "filling toward k, not dependence on T)&mdash;statistically nonzero but "
-        "practically negligible, consistent with the constant bound &#954; of Theorem "
+        "filling toward k, not any dependence on T). The rise is statistically nonzero "
+        "but practically negligible, consistent with the constant bound &#954; of Theorem "
         "1. At T = 100k the per-turn context is <b>7,300&times;</b> smaller under "
         "SYNAPSE and cost is flat ($0.0073) versus $53.16 (Corollary 1). Full growth "
         "fits are in Appendix C.", S["body"]))
@@ -660,8 +660,8 @@ def build(out_path):
         "MCP's selection success collapses: once gold tools are pushed beyond the "
         "32k-token window (T &gt; T&#42;) they become unselectable, driving hit@k to "
         "0.000 by T=30k. SYNAPSE degrades only gracefully (0.867 &rarr; 0.640). "
-        "Notably, MCP <i>wins at the smallest scale</i> (T=300: 0.980 vs 0.867), "
-        "confirming the baseline is not a strawman; the crossover occurs by T=1000 "
+        "MCP <i>wins at the smallest scale</i> (T=300: 0.980 vs 0.867), which "
+        "confirms the baseline is not a strawman; the crossover occurs by T=1000 "
         "(0.887 vs 0.229). The endpoint effect size (Eq. 14) is enormous for MCP "
         "success (Cohen's d = 9.9) versus a moderate d = 0.54 for SYNAPSE.", S["body"]))
 
@@ -682,7 +682,7 @@ def build(out_path):
          "back to pure semantics (&gamma; = 0 in Eq. 5) in a growing distractor sea; the "
          "tagged subset is near scale-invariant.", S, s)
     s.append(Paragraph(
-        "This is an honest, explanatory result: it localizes the limitation to a single "
+        "This result is explanatory: it localizes the limitation to a single "
         "designed-for failure mode (missing structured grounding, i.e. the tag term of "
         "Eq. 5 vanishing) and motivates richer ontological grounding rather than hiding "
         "the effect.", S["body"]))
@@ -764,7 +764,7 @@ def build(out_path):
     s.append(Paragraph(
         "SYNAPSE's reference resolver latency grows from 1.4 ms to 87.9 ms as T goes "
         "from 300 to 100k because it scans all T embeddings by brute force (the O(T) "
-        "row of Table 3). MCP's per-turn scoring stays low (1.9 &rarr; 3.5 ms)&mdash;"
+        "row of Table 3). MCP's per-turn scoring stays low (1.9 &rarr; 3.5 ms), "
         "but only because it has already discarded most tools by truncation, which is "
         "the very cause of its accuracy collapse. The protocol guarantee concerns "
         "<i>model context</i> (Theorem 1), which is independent of the ANN "
@@ -779,7 +779,7 @@ def build(out_path):
     s.append(_bullets([
         "<b>Synthetic data.</b> Our catalog is synthetic and controllable; absolute "
         "accuracy numbers are not claims about any production tool set. The "
-        "<i>relative</i> scaling behavior&mdash;the phenomenon of interest&mdash;is "
+        "<i>relative</i> scaling behavior (the phenomenon of interest) is "
         "robust because both systems see the same data and the same scorer &phi;.",
         "<b>No live LLM.</b> We isolate the protocol/retrieval layer and do not invoke "
         "a production LLM, so we measure context, cost, and selection quality, not "
@@ -818,7 +818,7 @@ def build(out_path):
         S["mono"]))
     s.append(Paragraph(
         "Conformance tests (Appendix A) encode the protocol's normative requirements, "
-        "including empirical checks of Theorems 1&ndash;2 (constant context; type-safe "
+        "including empirical checks of Theorems 1 and 2 (constant context; type-safe "
         "plans). We release the implementation, benchmark generators, statistical "
         "analysis, and figure scripts under the MIT license.", S["body"]))
 
@@ -826,18 +826,18 @@ def build(out_path):
     s.append(Paragraph("10&nbsp;&nbsp;Conclusion and Future Work", S["h1"]))
     s.append(Paragraph(
         "The dominant tool protocols make agents <i>worse</i> as their ecosystems grow, "
-        "because availability is conflated with in-context presence&mdash;an "
+        "because availability is conflated with in-context presence, an "
         "&#920;(T) cost we make precise in Eq. (3). SYNAPSE breaks that conflation with "
         "a signed capability knowledge graph, a calibrated hybrid resolver, and six "
         "fixed meta-verbs, achieving per-turn context and cost that are provably "
         "constant in the number of tools (Theorem 1, Corollary 1). Our matched-scorer "
-        "evaluation shows this constancy is not merely cheaper but <i>prevents</i> the "
-        "accuracy collapse that flat-context protocols suffer at scale, while we "
+        "evaluation shows this constancy does more than cut cost: it <i>prevents</i> the "
+        "accuracy collapse that flat-context protocols suffer at scale, and we "
         "quantify SYNAPSE's residual limitations honestly. Future work includes a "
         "production HNSW resolver (Table 3), richer ontological grounding to close the "
-        "tag-dropout gap, live-LLM end-to-end studies, and a wrapper exposing existing "
-        "MCP servers as CKG providers&mdash;an incremental adoption path to agent "
-        "ecosystems that get <i>better</i>, not worse, as they grow.", S["body"]))
+        "tag-dropout gap, live-LLM end-to-end studies, and a wrapper that exposes "
+        "existing MCP servers as CKG providers. That wrapper would let agent ecosystems "
+        "add tools without paying the usual accuracy and cost penalty.", S["body"]))
 
     # ================= References =================
     s.append(Paragraph("References", S["h1"]))
@@ -866,7 +866,7 @@ def build(out_path):
     s.append(Paragraph(
         "The reference implementation ships 12 conformance/unit tests (all passing) "
         "that encode the protocol's normative requirements, several of which are direct "
-        "empirical checks of the theorems in &sect;3&ndash;4:", S["body"]))
+        "empirical checks of the theorems in &sect;3 and &sect;4:", S["body"]))
     _table(["#", "Conformance requirement (MUST)", "Formalizes"], [
         ["1", "The protocol exposes exactly six meta-verbs.", "&sect;4.4"],
         ["2", "Per-turn model context is constant across catalog size T.", "Thm 1"],
@@ -938,13 +938,13 @@ def build(out_path):
         "context attains &#954;; when it returns a grounded miss (Eq. 9) the context is "
         "strictly smaller (only B plus the six verb schemas). Thus C<sub>SYN</sub>(T) "
         "&#8712; [B + 6&middot;s<sub>max</sub>, &#954;] for all T, an interval whose "
-        "width k&middot;m is independent of T&mdash;the measured 31-token drift across "
+        "width k&middot;m is independent of T. The measured 31-token drift across "
         "2.5 decades (&sect;6.1) is precisely activation sets filling toward k, not any "
         "dependence on catalog size.", S["body"]))
     s.append(Paragraph(
         "<b>On MCP's cliff.</b> Eq. (3) predicts a piecewise behavior: &#920;(T) growth "
         "for T &#8804; T&#42; followed by a clamp at W with recall loss. This is why a "
-        "single log-linear slope test mislabels MCP success as merely &#8220;declining&#8221; "
+        "single log-linear slope test mislabels MCP success as merely &quot;declining&quot; "
         "rather than <i>collapsing</i>; the correct description is the piecewise cliff, "
         "which we capture with the endpoint effect size (Cohen's d = 9.9, Table C2) "
         "rather than a linear slope. This is a methodological point: the right model for "
@@ -953,7 +953,7 @@ def build(out_path):
         "<b>Composition of guarantees.</b> Theorems 1 and 2 compose: the planner "
         "operates over the activation set A(q) (size &#8804; k), so plan construction "
         "and validation never load the full catalog into context. Hence the end-to-end "
-        "pipeline&mdash;intend, focus, plan, invoke, observe&mdash;preserves the O(1) "
+        "pipeline (intend, focus, plan, invoke, observe) preserves the O(1) "
         "context bound at every meta-verb, and every emitted plan is type-safe by "
         "Theorem 2.", S["body"]))
 

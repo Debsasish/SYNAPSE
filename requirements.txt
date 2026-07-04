@@ -1,0 +1,9 @@
+# Core scientific stack (offline-capable, deterministic)
+numpy>=2.0
+scipy>=1.11
+pandas>=2.0
+scikit-learn>=1.3
+networkx>=3.0
+matplotlib>=3.8
+statsmodels>=0.14
+tiktoken>=0.7

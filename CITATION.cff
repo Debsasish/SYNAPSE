@@ -1,0 +1,16 @@
+cff-version: 1.2.0
+message: "If you use this software or its results, please cite it as below."
+title: "SYNAPSE: Scale-Invariant Capability Activation for LLM Agents via a Capability Knowledge Graph"
+authors:
+  - name: "SYNAPSE Working Group"
+version: 1.0.0
+date-released: 2026-01-01
+license: MIT
+keywords:
+  - large language models
+  - agents
+  - tool use
+  - model context protocol
+  - knowledge graph
+  - protocol
+repository-code: "https://github.com/synapse-protocol/synapse-research"

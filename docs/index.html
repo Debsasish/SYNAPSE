@@ -17,7 +17,10 @@
 </head>
 <body>
 
+<div id="scroll-progress" aria-hidden="true"></div>
+<div class="mesh" aria-hidden="true"></div>
 <canvas id="graph-bg" aria-hidden="true"></canvas>
+<div id="cursor-glow" aria-hidden="true"></div>
 
 <!-- ================= NAV ================= -->
 <header id="nav">
@@ -66,19 +69,19 @@
   </div>
 
   <div class="hero-stats reveal">
-    <div class="stat">
+    <div class="stat tilt card-sheen">
       <div class="stat-num"><span class="count" data-target="7300" data-suffix="&times;">0</span></div>
       <div class="stat-label">less context at T=100k</div>
     </div>
-    <div class="stat">
+    <div class="stat tilt card-sheen">
       <div class="stat-num">O(1)</div>
       <div class="stat-label">context vs MCP's &Theta;(T)</div>
     </div>
-    <div class="stat">
+    <div class="stat tilt card-sheen">
       <div class="stat-num">$<span class="count" data-target="53" data-suffix="">0</span></div>
       <div class="stat-label">MCP cost/task vs $0.007</div>
     </div>
-    <div class="stat">
+    <div class="stat tilt card-sheen">
       <div class="stat-num"><span class="count" data-target="6" data-suffix="">0</span></div>
       <div class="stat-label">fixed meta-verbs, any T</div>
     </div>
@@ -98,17 +101,17 @@
     </p>
   </div>
   <div class="problem-grid">
-    <div class="prob-card reveal">
+    <div class="prob-card reveal tilt card-sheen">
       <div class="prob-ico">🧱</div>
       <h3>Context exhaustion</h3>
       <p>Thousands of tool schemas overflow even long windows and evict the task-relevant content.</p>
     </div>
-    <div class="prob-card reveal">
+    <div class="prob-card reveal tilt card-sheen">
       <div class="prob-ico">💸</div>
       <h3>Cost inflation</h3>
       <p>Every turn re-pays for every tool's tokens. Cost scales with catalog size, not task difficulty.</p>
     </div>
-    <div class="prob-card reveal">
+    <div class="prob-card reveal tilt card-sheen">
       <div class="prob-ico">📉</div>
       <h3>Accuracy collapse</h3>
       <p>Larger prompts dilute attention and add near-duplicate distractors, so selection quality falls.</p>
@@ -130,6 +133,43 @@
     <div class="compare-row">
       <span>Growth in T</span><span class="bad">&Theta;(T)</span><span class="good">O(1)</span>
     </div>
+  </div>
+
+  <div class="explorer reveal" aria-label="Interactive scale explorer">
+    <div class="explorer-top">
+      <div class="explorer-t">
+        <div class="lbl">Tools in catalog · T</div>
+        <div class="val"><span id="ex-tval">300</span> <small>tools</small></div>
+      </div>
+      <div class="explorer-t" style="text-align:right">
+        <div class="lbl">SYNAPSE advantage</div>
+        <div class="val"><span id="ex-factor">1×</span></div>
+      </div>
+    </div>
+    <div class="slider-wrap">
+      <input type="range" id="scale-slider" class="scale-slider" min="0" max="5" step="1" value="0" aria-label="Number of tools" />
+      <div class="slider-ticks">
+        <span>300</span><span>1k</span><span>3k</span><span>10k</span><span>30k</span><span>100k</span>
+      </div>
+    </div>
+    <div class="explorer-grid">
+      <div class="ex-card syn">
+        <h4><span class="dot"></span> SYNAPSE</h4>
+        <div class="ex-metric" id="syn-ctx">971 tok</div>
+        <div class="ex-sub" id="syn-cost">$0.0073 / task</div>
+        <div class="ex-bar"><span id="syn-bar" style="width:30%"></span></div>
+      </div>
+      <div class="ex-card mcp">
+        <h4><span class="dot"></span> MCP (flat)</h4>
+        <div class="ex-metric" id="mcp-ctx">21,770 tok</div>
+        <div class="ex-sub" id="mcp-cost">$0.16 / task</div>
+        <div class="ex-bar"><span id="mcp-bar" style="width:60%"></span></div>
+      </div>
+    </div>
+    <p class="explorer-note">
+      Drag the slider: SYNAPSE per-turn context stays <b>constant</b> while MCP grows linearly and
+      eventually <b>overflows</b> the 32k window (⚠). Illustrative model based on the paper's methodology.
+    </p>
   </div>
 </section>
 
@@ -196,7 +236,7 @@
     </p>
   </div>
   <div class="plane-grid">
-    <div class="plane-card reveal">
+    <div class="plane-card reveal tilt card-sheen">
       <div class="plane-num">01</div>
       <h3>Capability Knowledge Graph</h3>
       <p>
@@ -210,7 +250,7 @@
         <li>Tiered disclosure: compact tier-1 vs full tier-3</li>
       </ul>
     </div>
-    <div class="plane-card reveal">
+    <div class="plane-card reveal tilt card-sheen">
       <div class="plane-num">02</div>
       <h3>Hybrid Resolver</h3>
       <p>
@@ -224,7 +264,7 @@
         <li>Signed, chainable resolution receipts</li>
       </ul>
     </div>
-    <div class="plane-card reveal">
+    <div class="plane-card reveal tilt card-sheen">
       <div class="plane-num">03</div>
       <h3>Six Meta-Verbs</h3>
       <p>
@@ -261,15 +301,15 @@
       </p>
     </div>
     <div class="theory-cards">
-      <div class="tcard reveal">
+      <div class="tcard reveal tilt card-sheen">
         <div class="math-inline" data-tex="C_{\mathrm{MCP}}(T) = B + \bar L\,T = \Theta(T)"></div>
         <p>Flat protocols pay one token term per tool, every turn.</p>
       </div>
-      <div class="tcard reveal">
+      <div class="tcard reveal tilt card-sheen">
         <div class="math-inline" data-tex="C_{\mathrm{SYN}}(T) = B + 6\,s_{\max} + k\,m = \kappa"></div>
         <p>SYNAPSE context is a constant &kappa;, independent of T.</p>
       </div>
-      <div class="tcard reveal">
+      <div class="tcard reveal tilt card-sheen">
         <div class="math-inline" data-tex="N_{\exp} = \sigma\cdot\frac{(\Delta^{+})^{D+1}-1}{\Delta^{+}-1}"></div>
         <p>Neighborhood expansion is geometric in out-degree, never in T.</p>
       </div>
@@ -289,9 +329,9 @@
   </div>
   <div class="code-tabs reveal">
     <div class="tab-bar" role="tablist">
-      <button class="tab active" data-tab="t1">metaverbs.py</button>
-      <button class="tab" data-tab="t2">usage.py</button>
-      <button class="tab" data-tab="t3">run_all.py</button>
+      <button class="tab active" role="tab" tabindex="0" data-tab="t1">metaverbs.py</button>
+      <button class="tab" role="tab" tabindex="0" data-tab="t2">usage.py</button>
+      <button class="tab" role="tab" tabindex="0" data-tab="t3">run_all.py</button>
     </div>
     <div class="tab-panel active" id="t1">
 <pre><code class="language-python"># The only tool schemas the model ever sees. Fixed size, independent of T.
@@ -406,6 +446,9 @@ python run_all.py
   </div>
   <p class="copyright">&copy; 2026 Debasish Tripathy &middot; MIT License</p>
 </footer>
+
+<!-- Back to top -->
+<button id="to-top" aria-label="Back to top">↑</button>
 
 <!-- Lightbox -->
 <div id="lightbox" aria-hidden="true">

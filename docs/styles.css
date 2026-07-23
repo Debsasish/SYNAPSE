@@ -22,6 +22,46 @@
   --ease: cubic-bezier(.22, 1, .36, 1);
 }
 
+/* ================= Light theme ================= */
+html[data-theme="light"] {
+  --bg: #f6f8fd;
+  --bg-2: #eef1fa;
+  --bg-3: #e5eaf6;
+  --panel: rgba(18, 22, 45, 0.035);
+  --panel-2: rgba(18, 22, 45, 0.06);
+  --panel-brd: rgba(18, 22, 45, 0.12);
+  --panel-brd-2: rgba(18, 22, 45, 0.22);
+  --text: #171a2e;
+  --muted: #4b5170;
+  --dim: #6b7291;
+  --cyan: #0a9e93;
+  --violet: #6a4fe0;
+  --pink: #d63f8c;
+  --amber: #b9820a;
+  --good: #12a877;
+  --bad: #d8394b;
+  --grad: linear-gradient(120deg, #0a9e93 0%, #6a4fe0 52%, #d63f8c 100%);
+  --grad-soft: linear-gradient(120deg, rgba(10,158,147,.14), rgba(106,79,224,.14) 55%, rgba(214,63,140,.14));
+}
+html[data-theme="light"] body { cursor: default; }
+html[data-theme="light"] strong { color: #0c0f22; }
+html[data-theme="light"] .hero-sub { color: #2b3150; }
+html[data-theme="light"] #nav { background: rgba(246, 248, 253, 0.55); }
+html[data-theme="light"] #nav.scrolled { background: rgba(246, 248, 253, 0.85); }
+html[data-theme="light"] .card-sheen::before {
+  background: radial-gradient(240px circle at var(--mx, 50%) var(--my, 0%), rgba(18,22,45,.06), transparent 60%);
+}
+html[data-theme="light"] .compare-row:not(.compare-head):hover { background: rgba(18, 22, 45, 0.04); }
+html[data-theme="light"] .compare-head { background: rgba(18, 22, 45, 0.05); }
+html[data-theme="light"] .ex-bar { background: rgba(18, 22, 45, 0.08); }
+/* Softer ambient layers on a light background */
+html[data-theme="light"] #graph-bg { opacity: 0.32; }
+html[data-theme="light"] .mesh { opacity: 0.4; }
+html[data-theme="light"] #cursor-glow {
+  background: radial-gradient(circle, rgba(106,79,224,.14), rgba(10,158,147,.07) 40%, transparent 68%);
+}
+html[data-theme="light"] #nav.open .nav-links { background: rgba(246, 248, 253, 0.98); }
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; scroll-padding-top: 84px; }
 body {
@@ -141,6 +181,37 @@ strong { color: #fff; }
 }
 .nav-cta:hover { border-color: var(--cyan); box-shadow: 0 0 20px rgba(63,240,230,.3); transform: translateY(-2px); }
 #menu-toggle { display: none; background: none; border: none; color: var(--text); font-size: 1.5rem; cursor: pointer; }
+
+/* ---- Theme toggle ---- */
+#theme-toggle {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; margin-left: 4px;
+  border-radius: 999px; border: 1px solid var(--panel-brd);
+  background: var(--panel); color: var(--text); cursor: pointer;
+  transition: all .25s var(--ease);
+}
+#theme-toggle:hover { border-color: var(--cyan); box-shadow: 0 0 20px rgba(63,240,230,.28); transform: translateY(-2px); }
+.theme-ico { width: 18px; height: 18px; position: relative; display: block; }
+/* Moon (shown in dark theme) */
+.theme-ico::before {
+  content: ""; position: absolute; inset: 0; border-radius: 50%;
+  background: currentColor;
+  box-shadow: inset -5px -3px 0 0 var(--bg);
+  transition: opacity .25s var(--ease), transform .35s var(--ease);
+}
+/* Sun (shown in light theme) */
+.theme-ico::after {
+  content: ""; position: absolute; inset: 3px; border-radius: 50%;
+  background: currentColor; opacity: 0; transform: scale(.4);
+  box-shadow:
+    0 -8px 0 -5px currentColor, 0 8px 0 -5px currentColor,
+    -8px 0 0 -5px currentColor, 8px 0 0 -5px currentColor,
+    5px 5px 0 -5px currentColor, -5px -5px 0 -5px currentColor,
+    5px -5px 0 -5px currentColor, -5px 5px 0 -5px currentColor;
+  transition: opacity .25s var(--ease), transform .35s var(--ease);
+}
+html[data-theme="light"] .theme-ico::before { opacity: 0; transform: scale(.4); }
+html[data-theme="light"] .theme-ico::after { opacity: 1; transform: scale(1); }
 
 /* ---- Hero ---- */
 .hero {
@@ -553,7 +624,8 @@ footer { position: relative; z-index: 2; border-top: 1px solid var(--panel-brd);
 /* ---- Responsive ---- */
 @media (max-width: 900px) {
   .nav-links { display: none; }
-  #menu-toggle { display: block; margin-left: auto; }
+  #theme-toggle { margin-left: auto; }
+  #menu-toggle { display: block; margin-left: 8px; }
   #nav.open .nav-links {
     display: flex; flex-direction: column; gap: 8px;
     position: absolute; top: 100%; left: 0; right: 0;

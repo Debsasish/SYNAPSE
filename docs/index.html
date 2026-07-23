@@ -14,6 +14,19 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
 <link rel="stylesheet" href="styles.css" />
+<script>
+  // Apply saved / preferred theme before first paint to avoid a flash.
+  (function () {
+    try {
+      var saved = localStorage.getItem("synapse-theme");
+      var prefersLight = window.matchMedia("(prefers-color-scheme: light)").matches;
+      var theme = saved || (prefersLight ? "light" : "dark");
+      document.documentElement.setAttribute("data-theme", theme);
+    } catch (e) {
+      document.documentElement.setAttribute("data-theme", "dark");
+    }
+  })();
+</script>
 </head>
 <body>
 
@@ -36,6 +49,9 @@
     <a href="#code">Code</a>
     <a href="#cite">Cite</a>
   </nav>
+  <button id="theme-toggle" aria-label="Toggle light and dark theme" title="Toggle theme">
+    <span class="theme-ico" aria-hidden="true"></span>
+  </button>
   <a class="nav-cta" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">GitHub ↗</a>
   <button id="menu-toggle" aria-label="Toggle menu">☰</button>
 </header>

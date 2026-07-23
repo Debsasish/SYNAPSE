@@ -18,6 +18,34 @@
     );
   }
 
+  /* ---------- Theme toggle (persisted, system-aware) ---------- */
+  const root = document.documentElement;
+  const themeToggle = document.getElementById("theme-toggle");
+  const graphColors = () =>
+    root.getAttribute("data-theme") === "light"
+      ? { cyan: "10,158,147", violet: "106,79,224" }
+      : { cyan: "63,240,230", violet: "147,123,255" };
+  function applyThemeLabel() {
+    const isLight = root.getAttribute("data-theme") === "light";
+    if (themeToggle)
+      themeToggle.setAttribute(
+        "aria-label",
+        isLight ? "Switch to dark theme" : "Switch to light theme"
+      );
+  }
+  applyThemeLabel();
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const next = root.getAttribute("data-theme") === "light" ? "dark" : "light";
+      root.setAttribute("data-theme", next);
+      try {
+        localStorage.setItem("synapse-theme", next);
+      } catch (e) {}
+      applyThemeLabel();
+      COL = graphColors();
+    });
+  }
+
   /* ---------- Scroll progress bar ---------- */
   const progress = document.getElementById("scroll-progress");
   function updateProgress() {
@@ -326,7 +354,7 @@
     mouse.x = mouse.y = -9999;
   });
 
-  const COL = { cyan: "63,240,230", violet: "147,123,255" };
+  let COL = graphColors();
   const LINK = 150;
   const MOUSE_R = 170;
 

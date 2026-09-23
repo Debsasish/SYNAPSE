@@ -1,0 +1,14 @@
+{
+  "name": "synapse-jev-baseline",
+  "version": "1.0.0",
+  "description": "Jev (TypeSafe AI) as a reranker over SYNAPSE shortlists",
+  "scripts": {
+    "bench": "node --env-file=.env jev_bench.mjs"
+  },
+  "license": "MIT",
+  "type": "module",
+  "dependencies": {
+    "ai": "^7.0.111"
+  },
+  "private": true
+}

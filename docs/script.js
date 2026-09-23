@@ -5,9 +5,9 @@
   const header = document.querySelector(".site-header");
   const navToggle = document.querySelector(".nav-toggle");
   const nav = document.querySelector(".site-nav");
-  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-  const smallViewport = window.matchMedia("(max-width: 720px)").matches;
+  const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const coarsePointerQuery = window.matchMedia("(pointer: coarse)");
+  const smallViewportQuery = window.matchMedia("(max-width: 720px)");
 
   const setScrolled = () => {
     if (!header) {
@@ -96,8 +96,9 @@
   let currentOffsetY = 0;
   let targetOffsetX = 0;
   let targetOffsetY = 0;
-  let shouldAnimate = !reducedMotion;
-  let simplified = coarsePointer || smallViewport;
+  let shouldAnimate = !reducedMotionQuery.matches;
+  let simplified = coarsePointerQuery.matches || smallViewportQuery.matches;
+  let running = false;
 
   const randomInCluster = (cx, cy, sx, sy) => {
     const angle = Math.random() * Math.PI * 2;
@@ -137,7 +138,7 @@
     canvas.style.width = `${width}px`;
     canvas.style.height = `${height}px`;
     context.setTransform(dpr, 0, 0, dpr, 0, 0);
-    simplified = coarsePointer || smallViewport || width < 720;
+    simplified = coarsePointerQuery.matches || smallViewportQuery.matches || width < 720;
     rebuildNodes();
   };
 
@@ -157,7 +158,7 @@
     };
   };
 
-  const draw = (tick) => {
+  const renderFrame = (tick) => {
     context.clearRect(0, 0, width, height);
 
     currentOffsetX += (targetOffsetX - currentOffsetX) * 0.06;
@@ -205,29 +206,45 @@
     context.stroke();
     context.setLineDash([]);
 
+  };
+
+  const draw = (tick) => {
+    if (!running) {
+      return;
+    }
+
+    renderFrame(tick);
     if (shouldAnimate) {
       animationFrame = window.requestAnimationFrame(draw);
     }
   };
 
   const start = () => {
-    window.cancelAnimationFrame(animationFrame);
+    shouldAnimate = !reducedMotionQuery.matches;
     resizeCanvas();
-    draw(0);
-    if (shouldAnimate) {
-      animationFrame = window.requestAnimationFrame(draw);
+
+    if (!shouldAnimate) {
+      running = false;
+      window.cancelAnimationFrame(animationFrame);
+      renderFrame(0);
+      return;
     }
+
+    window.cancelAnimationFrame(animationFrame);
+    running = true;
+    animationFrame = window.requestAnimationFrame(draw);
   };
 
   const staticRender = () => {
-    window.cancelAnimationFrame(animationFrame);
+    running = false;
     shouldAnimate = false;
+    window.cancelAnimationFrame(animationFrame);
     resizeCanvas();
-    draw(0);
+    renderFrame(0);
   };
 
   const handlePointer = (event) => {
-    if (simplified || reducedMotion) {
+    if (simplified || reducedMotionQuery.matches) {
       return;
     }
 
@@ -258,7 +275,7 @@
     (entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
-          shouldAnimate = !reducedMotion;
+          shouldAnimate = !reducedMotionQuery.matches;
           if (shouldAnimate) {
             start();
           } else {

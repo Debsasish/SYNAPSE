@@ -35,6 +35,9 @@
   }
 
   document.querySelectorAll(".copy-button").forEach((button) => {
+    const originalLabel = button.dataset.originalLabel || button.textContent || "Copy citation";
+    button.dataset.originalLabel = originalLabel;
+
     button.addEventListener("click", async () => {
       const targetId = button.getAttribute("data-copy-target");
       const source = targetId ? document.getElementById(targetId) : null;
@@ -45,15 +48,14 @@
 
       try {
         await navigator.clipboard.writeText(text);
-        const previous = button.textContent;
         button.textContent = "Copied";
         window.setTimeout(() => {
-          button.textContent = previous;
+          button.textContent = originalLabel;
         }, 1600);
       } catch (_error) {
         button.textContent = "Copy failed";
         window.setTimeout(() => {
-          button.textContent = "Copy citation";
+          button.textContent = originalLabel;
         }, 1600);
       }
     });

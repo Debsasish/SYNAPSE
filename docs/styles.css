@@ -38,6 +38,7 @@ body {
     linear-gradient(180deg, #050816 0%, #060914 32%, #03050c 100%);
   font-family: Inter, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
+  overflow-x: hidden;
   overflow-x: clip;
 }
 

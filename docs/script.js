@@ -1,188 +1,283 @@
-/* ================= SYNAPSE site interactions ================= */
-(function () {
+(() => {
   "use strict";
 
-  /* ---------- Nav: scrolled state + mobile toggle ---------- */
-  const nav = document.getElementById("nav");
-  const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 30);
-  window.addEventListener("scroll", onScroll, { passive: true });
-  onScroll();
+  const root = document.documentElement;
+  const header = document.querySelector(".site-header");
+  const navToggle = document.querySelector(".nav-toggle");
+  const nav = document.querySelector(".site-nav");
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
+  const smallViewport = window.matchMedia("(max-width: 720px)").matches;
 
-  const menuToggle = document.getElementById("menu-toggle");
-  if (menuToggle) {
-    menuToggle.addEventListener("click", () => nav.classList.toggle("open"));
-    nav.querySelectorAll(".nav-links a").forEach((a) =>
-      a.addEventListener("click", () => nav.classList.remove("open"))
-    );
-  }
-
-  /* ---------- Reveal on scroll ---------- */
-  const io = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          e.target.classList.add("in");
-          io.unobserve(e.target);
-        }
-      });
-    },
-    { threshold: 0.12 }
-  );
-  document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
-
-  /* ---------- Animated counters ---------- */
-  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
-  function runCounter(el) {
-    const target = parseFloat(el.dataset.target);
-    const suffix = el.dataset.suffix || "";
-    const dur = 1500;
-    const start = performance.now();
-    function frame(now) {
-      const p = Math.min((now - start) / dur, 1);
-      const val = Math.floor(easeOut(p) * target);
-      el.innerHTML = val.toLocaleString() + suffix;
-      if (p < 1) requestAnimationFrame(frame);
-      else el.innerHTML = target.toLocaleString() + suffix;
-    }
-    requestAnimationFrame(frame);
-  }
-  const counterIO = new IntersectionObserver(
-    (entries) => {
-      entries.forEach((e) => {
-        if (e.isIntersecting) {
-          runCounter(e.target);
-          counterIO.unobserve(e.target);
-        }
-      });
-    },
-    { threshold: 0.6 }
-  );
-  document.querySelectorAll(".count").forEach((el) => counterIO.observe(el));
-
-  /* ---------- Code tabs ---------- */
-  document.querySelectorAll(".tab").forEach((tab) => {
-    tab.addEventListener("click", () => {
-      const id = tab.dataset.tab;
-      document.querySelectorAll(".tab").forEach((t) => t.classList.remove("active"));
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.remove("active"));
-      tab.classList.add("active");
-      document.getElementById(id).classList.add("active");
-    });
-  });
-
-  /* ---------- Lightbox ---------- */
-  const lightbox = document.getElementById("lightbox");
-  const lightboxImg = document.getElementById("lightbox-img");
-  document.querySelectorAll(".fig-card").forEach((fig) => {
-    fig.addEventListener("click", () => {
-      lightboxImg.src = fig.dataset.full;
-      lightbox.classList.add("open");
-    });
-  });
-  lightbox.addEventListener("click", () => lightbox.classList.remove("open"));
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") lightbox.classList.remove("open");
-  });
-
-  /* ---------- Copy BibTeX ---------- */
-  document.querySelectorAll(".copy-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const target = document.getElementById(btn.dataset.copy);
-      const text = target ? target.innerText : "";
-      navigator.clipboard.writeText(text).then(() => {
-        const orig = btn.textContent;
-        btn.textContent = "Copied!";
-        setTimeout(() => (btn.textContent = orig), 1600);
-      });
-    });
-  });
-
-  /* ---------- KaTeX render ---------- */
-  function renderMath() {
-    if (typeof katex === "undefined") {
-      setTimeout(renderMath, 120);
+  const setScrolled = () => {
+    if (!header) {
       return;
     }
-    document.querySelectorAll("[data-tex]").forEach((el) => {
-      try {
-        katex.render(el.dataset.tex, el, {
-          throwOnError: false,
-          displayMode: el.classList.contains("math-block"),
-        });
-      } catch (err) {
-        el.textContent = el.dataset.tex;
-      }
+    header.classList.toggle("is-scrolled", window.scrollY > 12);
+  };
+
+  window.addEventListener("scroll", setScrolled, { passive: true });
+  setScrolled();
+
+  if (navToggle && nav) {
+    navToggle.addEventListener("click", () => {
+      const expanded = navToggle.getAttribute("aria-expanded") === "true";
+      navToggle.setAttribute("aria-expanded", String(!expanded));
+      nav.classList.toggle("is-open", !expanded);
+    });
+
+    nav.querySelectorAll("a").forEach((link) => {
+      link.addEventListener("click", () => {
+        nav.classList.remove("is-open");
+        navToggle.setAttribute("aria-expanded", "false");
+      });
     });
   }
-  renderMath();
 
-  /* ---------- Animated knowledge-graph background ---------- */
-  const canvas = document.getElementById("graph-bg");
-  const ctx = canvas.getContext("2d");
-  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let W, H, nodes, dpr;
+  document.querySelectorAll(".copy-button").forEach((button) => {
+    button.addEventListener("click", async () => {
+      const targetId = button.getAttribute("data-copy-target");
+      const source = targetId ? document.getElementById(targetId) : null;
+      const text = source ? source.innerText.trim() : "";
+      if (!text) {
+        return;
+      }
 
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, 2);
-    W = canvas.width = window.innerWidth * dpr;
-    H = canvas.height = window.innerHeight * dpr;
-    canvas.style.width = window.innerWidth + "px";
-    canvas.style.height = window.innerHeight + "px";
-    const count = Math.min(70, Math.floor((window.innerWidth * window.innerHeight) / 22000));
-    nodes = Array.from({ length: count }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 0.22 * dpr,
-      vy: (Math.random() - 0.5) * 0.22 * dpr,
-      r: (Math.random() * 1.8 + 1.2) * dpr,
-      hue: Math.random() < 0.5 ? "cyan" : "violet",
-    }));
+      try {
+        await navigator.clipboard.writeText(text);
+        const previous = button.textContent;
+        button.textContent = "Copied";
+        window.setTimeout(() => {
+          button.textContent = previous;
+        }, 1600);
+      } catch (_error) {
+        button.textContent = "Copy failed";
+        window.setTimeout(() => {
+          button.textContent = "Copy citation";
+        }, 1600);
+      }
+    });
+  });
+
+  const canvas = document.getElementById("hero-canvas");
+  if (!canvas) {
+    return;
   }
 
-  const COL = {
-    cyan: "53,224,216",
-    violet: "139,107,255",
-  };
-  const LINK = 140;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return;
+  }
 
-  function draw() {
-    ctx.clearRect(0, 0, W, H);
-    const linkDist = LINK * dpr;
-    for (let i = 0; i < nodes.length; i++) {
-      const a = nodes[i];
-      a.x += a.vx;
-      a.y += a.vy;
-      if (a.x < 0 || a.x > W) a.vx *= -1;
-      if (a.y < 0 || a.y > H) a.vy *= -1;
-      for (let j = i + 1; j < nodes.length; j++) {
-        const b = nodes[j];
-        const dx = a.x - b.x,
-          dy = a.y - b.y;
-        const d = Math.hypot(dx, dy);
-        if (d < linkDist) {
-          const alpha = (1 - d / linkDist) * 0.4;
-          ctx.strokeStyle = `rgba(${COL[a.hue]},${alpha})`;
-          ctx.lineWidth = 0.6 * dpr;
-          ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.stroke();
+  const hero = document.getElementById("hero");
+  if (!hero) {
+    return;
+  }
+
+  const worldSeeds = [
+    [-0.75, -0.08, 0.22, 0.18],
+    [-0.46, -0.16, 0.13, 0.09],
+    [-0.38, 0.18, 0.11, 0.15],
+    [-0.02, -0.05, 0.18, 0.12],
+    [0.23, -0.1, 0.22, 0.16],
+    [0.48, -0.01, 0.15, 0.11],
+    [0.34, 0.22, 0.12, 0.12],
+    [0.74, 0.22, 0.1, 0.08],
+  ];
+
+  let width = 0;
+  let height = 0;
+  let dpr = 1;
+  let nodes = [];
+  let animationFrame = 0;
+  let pointerX = 0;
+  let pointerY = 0;
+  let currentOffsetX = 0;
+  let currentOffsetY = 0;
+  let targetOffsetX = 0;
+  let targetOffsetY = 0;
+  let shouldAnimate = !reducedMotion;
+  let simplified = coarsePointer || smallViewport;
+
+  const randomInCluster = (cx, cy, sx, sy) => {
+    const angle = Math.random() * Math.PI * 2;
+    const radius = Math.sqrt(Math.random());
+    return {
+      x: cx + Math.cos(angle) * sx * radius,
+      y: cy + Math.sin(angle) * sy * radius,
+    };
+  };
+
+  const rebuildNodes = () => {
+    const baseCount = simplified ? 55 : 95;
+    nodes = [];
+
+    for (let index = 0; index < baseCount; index += 1) {
+      const seed = worldSeeds[index % worldSeeds.length];
+      const sample = randomInCluster(seed[0], seed[1], seed[2], seed[3]);
+      const drift = simplified ? 0.05 : 0.12;
+      nodes.push({
+        x: sample.x,
+        y: sample.y,
+        driftX: (Math.random() - 0.5) * drift,
+        driftY: (Math.random() - 0.5) * drift,
+        radius: simplified ? 1.2 + Math.random() * 1.4 : 1 + Math.random() * 1.8,
+        depth: 0.4 + Math.random() * 0.9,
+      });
+    }
+  };
+
+  const resizeCanvas = () => {
+    const rect = hero.getBoundingClientRect();
+    width = Math.max(1, Math.floor(rect.width));
+    height = Math.max(1, Math.floor(rect.height));
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    simplified = coarsePointer || smallViewport || width < 720;
+    rebuildNodes();
+  };
+
+  const project = (node, tick) => {
+    const driftAmount = shouldAnimate ? tick * 0.00012 : 0;
+    const driftX = shouldAnimate ? Math.sin(driftAmount + node.y * 12) * node.driftX : 0;
+    const driftY = shouldAnimate ? Math.cos(driftAmount + node.x * 10) * node.driftY : 0;
+    const ellipseX = width * 0.5 + node.x * width * 0.42;
+    const ellipseY = height * 0.44 + node.y * height * 0.25;
+    const parallaxX = currentOffsetX * node.depth;
+    const parallaxY = currentOffsetY * node.depth;
+
+    return {
+      x: ellipseX + driftX * width + parallaxX,
+      y: ellipseY + driftY * height + parallaxY,
+      radius: node.radius,
+    };
+  };
+
+  const draw = (tick) => {
+    context.clearRect(0, 0, width, height);
+
+    currentOffsetX += (targetOffsetX - currentOffsetX) * 0.06;
+    currentOffsetY += (targetOffsetY - currentOffsetY) * 0.06;
+
+    const projected = nodes.map((node) => project(node, tick));
+    const linkDistance = simplified ? 78 : 105;
+
+    context.lineWidth = 1;
+
+    for (let i = 0; i < projected.length; i += 1) {
+      const a = projected[i];
+      for (let j = i + 1; j < projected.length; j += 1) {
+        const b = projected[j];
+        const dx = a.x - b.x;
+        const dy = a.y - b.y;
+        const distance = Math.hypot(dx, dy);
+
+        if (distance > linkDistance) {
+          continue;
         }
+
+        const alpha = 0.18 * (1 - distance / linkDistance);
+        context.strokeStyle = `rgba(124, 231, 255, ${alpha})`;
+        context.beginPath();
+        context.moveTo(a.x, a.y);
+        context.lineTo(b.x, b.y);
+        context.stroke();
       }
     }
-    for (const n of nodes) {
-      ctx.beginPath();
-      ctx.fillStyle = `rgba(${COL[n.hue]},0.9)`;
-      ctx.shadowColor = `rgba(${COL[n.hue]},0.9)`;
-      ctx.shadowBlur = 10 * dpr;
-      ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.shadowBlur = 0;
+
+    projected.forEach((point, index) => {
+      const emphasis = index % 6 === 0;
+      context.fillStyle = emphasis ? "rgba(159, 140, 255, 0.95)" : "rgba(124, 231, 255, 0.88)";
+      context.beginPath();
+      context.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
+      context.fill();
+    });
+
+    context.strokeStyle = "rgba(124, 231, 255, 0.13)";
+    context.setLineDash([3, 8]);
+    context.lineWidth = 1;
+    context.beginPath();
+    context.ellipse(width * 0.5, height * 0.44, width * 0.43, height * 0.28, 0, 0, Math.PI * 2);
+    context.stroke();
+    context.setLineDash([]);
+
+    if (shouldAnimate) {
+      animationFrame = window.requestAnimationFrame(draw);
     }
-    if (!reduce) requestAnimationFrame(draw);
+  };
+
+  const start = () => {
+    window.cancelAnimationFrame(animationFrame);
+    resizeCanvas();
+    draw(0);
+    if (shouldAnimate) {
+      animationFrame = window.requestAnimationFrame(draw);
+    }
+  };
+
+  const staticRender = () => {
+    window.cancelAnimationFrame(animationFrame);
+    shouldAnimate = false;
+    resizeCanvas();
+    draw(0);
+  };
+
+  const handlePointer = (event) => {
+    if (simplified || reducedMotion) {
+      return;
+    }
+
+    const rect = hero.getBoundingClientRect();
+    pointerX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointerY = ((event.clientY - rect.top) / rect.height) * 2 - 1;
+    targetOffsetX = pointerX * 14;
+    targetOffsetY = pointerY * 10;
+  };
+
+  const handleLeave = () => {
+    targetOffsetX = 0;
+    targetOffsetY = 0;
+  };
+
+  window.addEventListener("resize", () => {
+    if (shouldAnimate) {
+      resizeCanvas();
+    } else {
+      staticRender();
+    }
+  });
+
+  hero.addEventListener("pointermove", handlePointer, { passive: true });
+  hero.addEventListener("pointerleave", handleLeave, { passive: true });
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          shouldAnimate = !reducedMotion;
+          if (shouldAnimate) {
+            start();
+          } else {
+            staticRender();
+          }
+        } else {
+          window.cancelAnimationFrame(animationFrame);
+        }
+      });
+    },
+    { threshold: 0.08 }
+  );
+
+  observer.observe(hero);
+  if (reducedMotion) {
+    staticRender();
+  } else {
+    start();
   }
 
-  resize();
-  window.addEventListener("resize", resize);
-  draw();
+  root.classList.add("js-ready");
 })();

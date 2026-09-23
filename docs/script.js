@@ -282,6 +282,7 @@
             staticRender();
           }
         } else {
+          running = false;
           window.cancelAnimationFrame(animationFrame);
         }
       });
@@ -290,7 +291,7 @@
   );
 
   observer.observe(hero);
-  if (reducedMotion) {
+  if (reducedMotionQuery.matches) {
     staticRender();
   } else {
     start();

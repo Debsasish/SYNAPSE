@@ -817,14 +817,9 @@ tbody tr:last-child td {
     padding-top: 2.5rem;
   }
 
-  .hero-strip,
   .site-footer,
   .citation-card {
     flex-direction: column;
-  }
-
-  .hero-strip {
-    display: grid;
   }
 
   .detail-card summary {

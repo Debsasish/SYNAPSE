@@ -88,6 +88,7 @@
     let shouldAnimate = !reducedMotionQuery.matches;
     let simplified = coarsePointerQuery.matches || smallViewportQuery.matches;
     let running = false;
+    let heroVisible = false;
 
     const randomInCluster = (cx, cy, sx, sy) => {
       const angle = Math.random() * Math.PI * 2;
@@ -248,6 +249,19 @@
       targetOffsetY = 0;
     };
 
+    const refreshMode = () => {
+      if (!heroVisible) {
+        staticRender();
+        return;
+      }
+
+      if (reducedMotionQuery.matches) {
+        staticRender();
+      } else {
+        start();
+      }
+    };
+
     window.addEventListener("resize", () => {
       window.clearTimeout(resizeTimer);
       resizeTimer = window.setTimeout(() => {
@@ -259,19 +273,19 @@
       }, 120);
     });
 
+    [reducedMotionQuery, coarsePointerQuery, smallViewportQuery].forEach((query) => {
+      query.addEventListener("change", refreshMode);
+    });
+
     hero.addEventListener("pointermove", handlePointer, { passive: true });
     hero.addEventListener("pointerleave", handleLeave, { passive: true });
 
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            shouldAnimate = !reducedMotionQuery.matches;
-            if (shouldAnimate) {
-              start();
-            } else {
-              staticRender();
-            }
+          heroVisible = entry.isIntersecting;
+          if (heroVisible) {
+            refreshMode();
           } else {
             running = false;
             window.cancelAnimationFrame(animationFrame);

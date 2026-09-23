@@ -1,634 +1,713 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SYNAPSE — Scale-invariant capability activation for LLM agents</title>
-  <meta
-    name="description"
-    content="SYNAPSE is a scale-invariant protocol for tool-augmented LLM agents. Explore the benchmark results, Jev comparison, methodology, and reproduction links for the SYNAPSE research artifact."
-  />
-  <meta property="og:title" content="SYNAPSE — Scale-invariant capability activation for LLM agents" />
-  <meta
-    property="og:description"
-    content="A responsive research site for SYNAPSE with headline benchmark results, honest caveats, and the merged Jev reranker comparison."
-  />
-  <meta property="og:type" content="website" />
-  <meta name="theme-color" content="#050816" />
-  <link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SYNAPSE is a scale-invariant protocol for tool-augmented LLM agents. Explore benchmark results, methodology, and reproduction links.">
+  <meta name="theme-color" content="#020806">
+  <title>SYNAPSE // Scale-invariant capability activation</title>
+  <style>
+    :root {
+      --bg: #020806;
+      --ink: #77ff9d;
+      --bright: #c0ffd1;
+      --dim: #3a9b58;
+      --ghost: rgba(119, 255, 157, .1);
+      --panel: rgba(2, 14, 9, .88);
+      --max: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 5.5rem; }
+    body {
+      margin: 0;
+      min-width: 320px;
+      background: var(--bg);
+      color: var(--ink);
+      font: 15px/1.65 "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      text-shadow: 0 0 8px rgba(119, 255, 157, .28);
+      overflow-x: hidden;
+    }
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 20;
+      pointer-events: none;
+      background: repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 0, 0, .18) 3px 4px);
+      opacity: .35;
+    }
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 19;
+      pointer-events: none;
+      box-shadow: inset 0 0 120px #000;
+    }
+    ::selection { color: var(--bg); background: var(--bright); }
+    a { color: inherit; }
+    button { font: inherit; }
+    :focus-visible { outline: 1px dashed var(--bright); outline-offset: 5px; }
+
+    .skip {
+      position: fixed;
+      top: -5rem;
+      left: 1rem;
+      z-index: 100;
+      padding: .5rem 1rem;
+      color: var(--bg);
+      background: var(--bright);
+    }
+    .skip:focus { top: 1rem; }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    #ascii-field {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      opacity: .22;
+      pointer-events: none;
+    }
+
+    .site-header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      border-bottom: 1px solid var(--dim);
+      background: rgba(2, 8, 6, .94);
+    }
+    .nav-shell {
+      max-width: var(--max);
+      min-height: 4rem;
+      margin: auto;
+      padding: .65rem 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+    .brand {
+      color: var(--bright);
+      text-decoration: none;
+      font-weight: 800;
+      letter-spacing: .14em;
+      white-space: nowrap;
+    }
+    .brand::before { content: "> "; color: var(--dim); }
+    .brand::after { content: "_"; animation: blink 1s steps(1) infinite; }
+    nav { display: flex; flex: 1; justify-content: flex-end; gap: .35rem 1.1rem; flex-wrap: wrap; }
+    nav a {
+      color: var(--dim);
+      text-decoration: none;
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    nav a::before { content: "./"; }
+    nav a:hover, nav a:focus-visible { color: var(--bright); text-shadow: 0 0 12px var(--ink); }
+
+    main, .site-footer { position: relative; z-index: 1; }
+    .hero {
+      max-width: var(--max);
+      min-height: calc(100vh - 4rem);
+      margin: auto;
+      padding: clamp(4rem, 9vw, 8rem) 1.25rem 3rem;
+      display: grid;
+      align-content: center;
+    }
+    .bootline { color: var(--dim); margin: 0 0 1.5rem; }
+    .bootline::before { content: "[ OK ] "; color: var(--bright); }
+    .hero h1 {
+      max-width: 15ch;
+      min-height: 2.5em;
+      margin: 0;
+      color: var(--bright);
+      font-size: clamp(2.3rem, 7vw, 6.6rem);
+      line-height: .94;
+      letter-spacing: -.07em;
+      text-transform: uppercase;
+    }
+    .hero h1::after {
+      content: "█";
+      margin-left: .08em;
+      color: var(--ink);
+      animation: blink .75s steps(1) infinite;
+    }
+    .hero-grid {
+      margin-top: 3rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(300px, .8fr);
+      gap: 2rem;
+      align-items: end;
+    }
+    .lede { max-width: 68ch; color: var(--bright); font-size: clamp(1rem, 2vw, 1.18rem); }
+    .prompt { color: var(--dim); }
+    .prompt::before { content: "synapse@ckg:~$ "; color: var(--ink); }
+
+    .actions { display: flex; gap: .7rem; flex-wrap: wrap; margin-top: 1.8rem; }
+    .ascii-button {
+      position: relative;
+      padding: .62rem .85rem;
+      border: 0;
+      color: var(--ink);
+      background: transparent;
+      text-decoration: none;
+      cursor: pointer;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+    }
+    .ascii-button::before { content: "[ "; color: var(--dim); }
+    .ascii-button::after { content: " ]"; color: var(--dim); }
+    .ascii-button:hover, .ascii-button:focus-visible {
+      color: var(--bright);
+      background: var(--ghost);
+      animation: glitch .18s steps(2) 2;
+    }
+    .ascii-button:hover::before { content: "▓["; }
+    .ascii-button:hover::after { content: "]▓"; }
+
+    .frame {
+      position: relative;
+      border: 1px solid var(--dim);
+      background: var(--panel);
+      padding: 1.25rem;
+      box-shadow: 8px 8px 0 rgba(58, 155, 88, .13);
+    }
+    .frame::before {
+      content: "+-- " attr(data-title) " ";
+      position: absolute;
+      top: -.85em;
+      left: .7rem;
+      padding-right: .5rem;
+      color: var(--bright);
+      background: var(--bg);
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: .78rem;
+    }
+    .frame::after {
+      content: "+";
+      position: absolute;
+      right: -1px;
+      bottom: -.9em;
+      color: var(--dim);
+    }
+    .hero-art {
+      margin: 0 0 1rem;
+      overflow: hidden;
+      color: var(--dim);
+      font-size: clamp(.62rem, 1.2vw, .86rem);
+      line-height: 1.18;
+      white-space: pre;
+    }
+    .metrics { margin: 0; }
+    .metrics div { display: grid; grid-template-columns: 1fr auto; gap: .5rem; padding: .45rem 0; border-top: 1px dashed var(--dim); }
+    .metrics dt { color: var(--dim); }
+    .metrics dd { margin: 0; color: var(--bright); font-weight: 700; }
+
+    .ticker {
+      width: 100%;
+      overflow: hidden;
+      border-block: 1px solid var(--dim);
+      background: var(--panel);
+      white-space: nowrap;
+    }
+    .ticker p {
+      display: inline-block;
+      min-width: 100%;
+      margin: 0;
+      padding: .55rem 0;
+      color: var(--dim);
+      animation: crawl 28s linear infinite;
+    }
+    .ticker b { color: var(--bright); }
+
+    .section {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: clamp(5rem, 10vw, 8rem) 1.25rem;
+      border-bottom: 1px dashed rgba(58, 155, 88, .5);
+    }
+    .section-head { max-width: 850px; margin-bottom: 3rem; }
+    .kicker { margin: 0 0 .5rem; color: var(--dim); text-transform: uppercase; letter-spacing: .12em; }
+    .kicker::before { content: "/* "; }
+    .kicker::after { content: " */"; }
+    h2 {
+      margin: 0 0 1rem;
+      color: var(--bright);
+      font-size: clamp(1.65rem, 4vw, 3.2rem);
+      line-height: 1.08;
+      text-transform: uppercase;
+      letter-spacing: -.04em;
+    }
+    h3 { margin-top: 0; color: var(--bright); font-size: 1rem; text-transform: uppercase; }
+    h3::before { content: "> "; color: var(--dim); }
+    p { max-width: 78ch; }
+    code { color: var(--bright); }
+
+    .grid { display: grid; gap: 1.25rem; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .card { min-height: 100%; }
+    .card p, .card li { color: var(--ink); }
+    .card-number { display: block; margin-bottom: 1rem; color: var(--dim); font-size: 2rem; }
+    .card-number::before { content: "0x"; }
+    ul { padding-left: 1.2rem; }
+    li::marker { content: "+  "; color: var(--bright); }
+
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; white-space: nowrap; }
+    caption { padding: .5rem; color: var(--dim); text-align: left; }
+    th, td { padding: .75rem; border: 1px solid var(--dim); text-align: left; }
+    th { color: var(--bright); background: var(--ghost); }
+    td:last-child { color: var(--dim); }
+
+    .bar-set { display: grid; gap: 1rem; margin-top: 2rem; }
+    .bar-row { display: grid; grid-template-columns: 12rem 1fr 5rem; gap: 1rem; align-items: center; }
+    .bar { overflow: hidden; color: var(--dim); white-space: nowrap; }
+    .bar span { color: var(--bright); }
+    .bar-value { color: var(--bright); text-align: right; }
+
+    details { margin-top: 1rem; }
+    summary { color: var(--bright); cursor: pointer; list-style: none; text-transform: uppercase; }
+    summary::before { content: "[+] "; color: var(--dim); }
+    details[open] summary::before { content: "[-] "; }
+    details .table-wrap { margin-top: 1rem; }
+
+    .terminal {
+      margin: 0;
+      padding: 1.25rem;
+      overflow-x: auto;
+      color: var(--bright);
+      background: #010403;
+      border-left: 3px solid var(--dim);
+      text-shadow: none;
+      white-space: pre;
+    }
+    .terminal::before { content: "$ "; color: var(--dim); }
+
+    .link-card {
+      display: block;
+      min-height: 8rem;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .link-card strong { display: block; margin-bottom: .7rem; color: var(--bright); text-transform: uppercase; }
+    .link-card strong::before { content: "-> "; color: var(--dim); }
+    .link-card:hover { color: var(--bright); animation: glitch .18s steps(2) 2; box-shadow: 8px 8px 0 rgba(119, 255, 157, .25); }
+
+    .citation { display: grid; grid-template-columns: 1fr auto; align-items: end; gap: 1rem; }
+    .site-footer {
+      max-width: var(--max);
+      margin: auto;
+      padding: 3rem 1.25rem 4rem;
+      display: flex;
+      justify-content: space-between;
+      gap: 2rem;
+      color: var(--dim);
+    }
+    .footer-logo { color: var(--bright); }
+    .footer-logo::before { content: "<"; }
+    .footer-logo::after { content: "/>"; }
+
+    .reveal { opacity: 0; transform: translateY(12px); transition: opacity .55s ease, transform .55s ease; }
+    .reveal.visible { opacity: 1; transform: none; }
+    @keyframes blink { 50% { opacity: 0; } }
+    @keyframes crawl { to { transform: translateX(-100%); } }
+    @keyframes glitch {
+      0% { transform: translate(0); }
+      33% { transform: translate(2px, -1px); }
+      66% { transform: translate(-2px, 1px); }
+      100% { transform: translate(0); }
+    }
+
+    @media (max-width: 820px) {
+      .nav-shell { align-items: flex-start; flex-direction: column; gap: .4rem; }
+      nav { justify-content: flex-start; }
+      html { scroll-padding-top: 8rem; }
+      .hero-grid, .grid-3, .grid-2, .citation { grid-template-columns: 1fr; }
+      .bar-row { grid-template-columns: 1fr; gap: .2rem; }
+      .bar-value { text-align: left; }
+    }
+    @media (max-width: 520px) {
+      body { font-size: 13px; }
+      nav a { font-size: .7rem; }
+      .hero h1 { font-size: 2.35rem; }
+      .site-footer { flex-direction: column; }
+      th, td { padding: .55rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+  </style>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to content</a>
+  <a class="skip" href="#main">Skip to content</a>
+  <canvas id="ascii-field" aria-hidden="true"></canvas>
 
   <header class="site-header" id="top">
-    <div class="header-shell">
-      <a class="brand" href="#hero" aria-label="SYNAPSE home">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span class="brand-label">
-          <strong>SYNAPSE</strong>
-          <span>Scale-invariant capability activation</span>
-        </span>
-      </a>
-
-      <button
-        class="nav-toggle"
-        type="button"
-        aria-expanded="false"
-        aria-controls="site-nav"
-        aria-label="Toggle navigation"
-      >
-        <span></span><span></span><span></span>
-      </button>
-
-      <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
+    <div class="nav-shell">
+      <a class="brand" href="#hero" aria-label="SYNAPSE home">SYNAPSE</a>
+      <nav aria-label="Primary navigation">
         <a href="#results">Results</a>
         <a href="#protocol">Protocol</a>
-        <a href="#jev">Jev baseline</a>
-        <a href="#methodology">Methodology</a>
+        <a href="#jev">Jev</a>
+        <a href="#methodology">Methods</a>
         <a href="#reproduce">Reproduce</a>
         <a href="#cite">Cite</a>
       </nav>
-
-      <a
-        class="header-cta"
-        href="https://github.com/Debsasish/SYNAPSE"
-        target="_blank"
-        rel="noopener noreferrer"
-      >
-        Repository
-      </a>
     </div>
   </header>
 
   <main id="main">
     <section class="hero" id="hero" aria-labelledby="hero-title">
-      <canvas id="hero-canvas" aria-hidden="true"></canvas>
-      <div class="hero-noise" aria-hidden="true"></div>
-      <div class="hero-shell">
-        <div class="hero-copy">
-          <p class="eyebrow">Research artifact • GitHub Pages edition</p>
-          <h1 id="hero-title">More tools should not make an agent worse.</h1>
-          <p class="hero-lede">
-            SYNAPSE keeps the model-facing tool surface constant while the capability catalogue scales.
-            Instead of injecting every tool into prompt context, it resolves a compact activation set from
-            a signed capability graph and exposes only six fixed meta-verbs.
-          </p>
-          <div class="hero-actions">
-            <a class="button button-primary" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener noreferrer">Read the paper</a>
-            <a class="button" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener noreferrer">Open source</a>
-            <a class="button" href="#jev">See the Jev comparison</a>
+      <p class="bootline">CKG ONLINE // 100,000 CAPABILITIES INDEXED // INTERFACE BOUNDED</p>
+      <h1 id="hero-title" data-decode="More tools should not make an agent worse.">More tools should not make an agent worse.</h1>
+      <div class="hero-grid">
+        <div>
+          <p class="prompt">resolve --intent "scale without context collapse"</p>
+          <p class="lede">SYNAPSE keeps the model-facing tool surface constant while the capability catalogue scales. A signed graph resolves a compact activation set; the model sees only six fixed meta-verbs.</p>
+          <div class="actions">
+            <a class="ascii-button" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener noreferrer">Read paper</a>
+            <a class="ascii-button" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener noreferrer">Open source</a>
+            <a class="ascii-button" href="#jev">Jev comparison</a>
           </div>
-          <p class="hero-footnote">
-            Measured on 90 real tasks plus 5 impossible-task abstention checks, with honest reporting of the
-            synthetic-catalog and wall-clock limitations.
-          </p>
         </div>
-
-        <aside class="hero-panel" aria-label="Headline benchmark summary">
-          <div class="hero-panel-head">
-            <p class="panel-label">Headline at T = 100,000</p>
-            <p class="panel-kicker">SYNAPSE vs. flat MCP baseline</p>
-          </div>
-          <dl class="hero-metrics">
-            <div>
-              <dt>Context tokens / turn</dt>
-              <dd>971 <span>vs 7,088,086</span></dd>
-              <p>7,300× smaller</p>
-            </div>
-            <div>
-              <dt>Cost / task</dt>
-              <dd>$0.0073 <span>vs $53.16</span></dd>
-              <p>7,300× cheaper</p>
-            </div>
-            <div>
-              <dt>Task success (hit@k)</dt>
-              <dd>0.640 <span>vs 0.000</span></dd>
-              <p>MCP overflows the context window</p>
-            </div>
+        <aside class="frame" data-title="resolver.trace" aria-label="Headline benchmark summary">
+<pre class="hero-art" aria-hidden="true">
+       [ INTENT ]
+           |
+     .-----+-----.
+     |  SIGNED   |
+     |    CKG    |
+     '-----+-----'
+       /   |   \
+     [A]  [B]  [C]  ... [k]
+           |
+   { SIX META-VERBS }</pre>
+          <dl class="metrics">
+            <div><dt>context / turn</dt><dd>971 tok</dd></div>
+            <div><dt>reduction</dt><dd>7,300x</dd></div>
+            <div><dt>success @100k</dt><dd>0.640</dd></div>
           </dl>
-          <pre class="ascii-panel" aria-hidden="true">
-  .       .   .      .      SYNAPSE
-     .-^-._   o   .         resolver
-  . /_/_\\_\\ .  .          graph → shortlist → verbs
-   /_/___\\_\\       .
- . \_\___/_/    .          O(1) prompt surface
-    `-.-'   .
-          </pre>
         </aside>
       </div>
-
-      <div class="hero-strip" aria-label="Research highlights">
-        <article>
-          <h2>MCP is stronger at small T</h2>
-          <p>At T = 300, MCP hit@k is 0.980 while SYNAPSE is 0.867. The crossover happens by T = 1000.</p>
-        </article>
-        <article>
-          <h2>Confidence is calibrated</h2>
-          <p>Pooled expected calibration error is 0.138, and impossible-task abstention is 1.000.</p>
-        </article>
-        <article>
-          <h2>Failure mode is explicit</h2>
-          <p>The remaining decay is localized to tag-withheld tasks rather than hidden in prompt truncation.</p>
-        </article>
-      </div>
     </section>
 
-    <section class="section" id="results" aria-labelledby="results-title">
-      <div class="section-heading">
-        <p class="eyebrow">Benchmark results</p>
-        <h2 id="results-title">A cleaner information hierarchy for the scaling story</h2>
-        <p>
-          The main claim is simple: a flat protocol pays for the entire tool catalogue on every turn,
-          while SYNAPSE pays for a bounded interface. The result is dramatic at large scale, but the
-          site also preserves the uncomfortable parts of the story rather than hiding them.
-        </p>
-      </div>
+    <div class="ticker" aria-label="Research highlights">
+      <p>&nbsp;&nbsp;<b>[SMALL-T]</b> MCP WINS AT T=300: 0.980 VS 0.867 &nbsp;///&nbsp; <b>[CALIBRATION]</b> ECE=0.138 &nbsp;///&nbsp; <b>[ABSTENTION]</b> IMPOSSIBLE TASKS=1.000 &nbsp;///&nbsp; <b>[LIMIT]</b> SYNTHETIC CATALOGUE &nbsp;///&nbsp;</p>
+    </div>
 
-      <div class="card-grid card-grid-three">
-        <article class="info-card accent-cyan">
-          <h3>What scales</h3>
-          <p>SYNAPSE keeps the prompt interface fixed through six meta-verbs and an out-of-context resolver.</p>
+    <section class="section reveal" id="results" aria-labelledby="results-title">
+      <header class="section-head">
+        <p class="kicker">01 / benchmark results</p>
+        <h2 id="results-title">Constant interface.<br>Non-constant advantage.</h2>
+        <p>A flat protocol pays for the entire catalogue every turn. SYNAPSE pays for a bounded interface. The advantage emerges at scale without concealing where the baseline wins.</p>
+      </header>
+      <div class="grid grid-3">
+        <article class="frame card" data-title="what_scales">
+          <h3>Fixed surface</h3>
+          <p>Six meta-verbs and an out-of-context resolver keep prompt growth independent of tool count.</p>
         </article>
-        <article class="info-card accent-violet">
-          <h3>What is measured</h3>
-          <p>Context tokens, cost, hit@k, reliability, ablations, and activation-size sweeps are all generated from the artifact.</p>
+        <article class="frame card" data-title="what_is_measured">
+          <h3>Artifact output</h3>
+          <p>Context, cost, hit@k, reliability, ablations, and activation-size sweeps are generated from the repository.</p>
         </article>
-        <article class="info-card accent-rose">
-          <h3>What is not claimed</h3>
-          <p>The catalogue is synthetic, the reference ANN path is not wall-clock optimal, and a live agent loop is not evaluated here.</p>
-        </article>
-      </div>
-
-      <div class="data-layout">
-        <article class="data-card data-card-strong">
-          <div class="data-card-head">
-            <h3>Main measured result</h3>
-            <p>T = 100,000 tools • matched-scorer baseline</p>
-          </div>
-          <div class="table-scroll">
-            <table>
-              <caption class="sr-only">SYNAPSE versus MCP at one hundred thousand tools</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Metric</th>
-                  <th scope="col">SYNAPSE</th>
-                  <th scope="col">MCP</th>
-                  <th scope="col">Interpretation</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <th scope="row">Context tokens / turn</th>
-                  <td>971</td>
-                  <td>7,088,086</td>
-                  <td>7,300× smaller</td>
-                </tr>
-                <tr>
-                  <th scope="row">Cost / task</th>
-                  <td>$0.0073</td>
-                  <td>$53.16</td>
-                  <td>7,300× cheaper</td>
-                </tr>
-                <tr>
-                  <th scope="row">Task success hit@k</th>
-                  <td>0.640</td>
-                  <td>0.000</td>
-                  <td>MCP loses the gold tool to prompt overflow</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </article>
-
-        <article class="data-card honest-card">
-          <div class="data-card-head">
-            <h3>Scientific honesty, preserved</h3>
-            <p>The benchmark is not framed as an unconditional victory lap.</p>
-          </div>
-          <ul class="bullet-list">
-            <li><strong>MCP wins at T = 300:</strong> 0.980 vs 0.867.</li>
-            <li><strong>Crossover by T = 1000:</strong> large-catalog behavior is where SYNAPSE becomes preferable.</li>
-            <li><strong>Calibration is reported:</strong> pooled ECE = 0.138.</li>
-            <li><strong>Impossible-task abstention:</strong> 1.000.</li>
-            <li><strong>Task set:</strong> 90 real tasks, plus 5 should-miss tasks.</li>
-          </ul>
+        <article class="frame card" data-title="what_is_not_claimed">
+          <h3>Bounded claim</h3>
+          <p>The catalogue is synthetic, reference ANN is not wall-clock optimal, and no live agent loop is evaluated.</p>
         </article>
       </div>
-
-      <div class="figure-grid">
-        <a class="figure-card" href="assets/figures/fig5_scale_invariance_grid.png" target="_blank" rel="noopener noreferrer">
-          <img src="assets/figures/fig5_scale_invariance_grid.png" alt="Scale-invariance grid showing context, success, cost, and precision trends across catalogue sizes." loading="lazy" />
-          <span>Scale overview</span>
-        </a>
-        <a class="figure-card" href="assets/figures/fig7_reliability.png" target="_blank" rel="noopener noreferrer">
-          <img src="assets/figures/fig7_reliability.png" alt="Reliability figure for SYNAPSE confidence calibration." loading="lazy" />
-          <span>Calibration and confidence</span>
-        </a>
-        <a class="figure-card" href="assets/figures/fig10_theory_ceiling.png" target="_blank" rel="noopener noreferrer">
-          <img src="assets/figures/fig10_theory_ceiling.png" alt="Visibility-ceiling figure comparing measured and theoretical collapse for flat protocols." loading="lazy" />
-          <span>Visibility ceiling intuition</span>
-        </a>
-      </div>
-    </section>
-
-    <section class="section" id="protocol" aria-labelledby="protocol-title">
-      <div class="section-heading">
-        <p class="eyebrow">Protocol explanation</p>
-        <h2 id="protocol-title">Three planes, one bounded interface</h2>
-        <p>
-          SYNAPSE separates storage, resolution, and interaction. The model never receives the whole
-          catalogue. It receives a small interface and asks for structure only when it needs it.
-        </p>
-      </div>
-
-      <div class="protocol-grid">
-        <article class="protocol-card">
-          <span class="protocol-step">01</span>
-          <h3>Capability knowledge graph</h3>
-          <p>
-            Capabilities, types, providers, and concepts live in a signed graph outside prompt context,
-            enabling typed expansion and integrity checks without linear token growth.
-          </p>
-        </article>
-        <article class="protocol-card">
-          <span class="protocol-step">02</span>
-          <h3>Hybrid resolver</h3>
-          <p>
-            The resolver blends semantic, lexical, ontology-tag, graph-proximity, and type-fit signals
-            to return a small shortlist and a calibrated confidence estimate.
-          </p>
-        </article>
-        <article class="protocol-card">
-          <span class="protocol-step">03</span>
-          <h3>Six fixed meta-verbs</h3>
-          <p>
-            The model-facing surface stays constant: <code>intend</code>, <code>focus</code>,
-            <code>plan</code>, <code>invoke</code>, <code>observe</code>, and <code>feedback</code>.
-          </p>
-        </article>
-      </div>
-
-      <div class="callout-grid">
-        <article class="callout-card">
-          <h3>Why T matters</h3>
-          <p>Flat protocols spend tokens on every tool on every turn. SYNAPSE spends tokens on only the activated capability set.</p>
-        </article>
-        <article class="callout-card">
-          <h3>Where decay remains</h3>
-          <p>The remaining performance drop is mainly in tag-withheld cases rather than universal degradation as the catalogue grows.</p>
-        </article>
-        <article class="callout-card">
-          <h3>Why this is reproducible</h3>
-          <p>The repo includes figures, CSV outputs, a paper build, and tests, with a single-command reproduction path.</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="section" id="jev" aria-labelledby="jev-title">
-      <div class="section-heading">
-        <p class="eyebrow">Merged today in PR #1</p>
-        <h2 id="jev-title">Jev reranking baseline over SYNAPSE shortlists</h2>
-        <p>
-          The new comparison asks a narrower question than the main paper: if Jev receives a bounded
-          shortlist, can it pick the best tool more accurately than the resolver's own top-1? The answer
-          in this experiment is no, but the interpretation matters.
-        </p>
-      </div>
-
-      <div class="data-card data-card-strong">
-        <div class="data-card-head">
-          <h3>Core Jev hit@1 table</h3>
-          <p>90 real tasks • seed 1 • two catalogue sizes</p>
-        </div>
-        <div class="table-scroll">
+      <div class="frame" data-title="scale_100000.log" style="margin-top:2rem">
+        <div class="table-wrap">
           <table>
-            <caption class="sr-only">Jev comparison summary across shortlist strategies</caption>
-            <thead>
-              <tr>
-                <th scope="col">Arm</th>
-                <th scope="col">T = 300</th>
-                <th scope="col">T = 1000</th>
-                <th scope="col">T = 1000 hit@1 when gold is in shortlist</th>
-              </tr>
-            </thead>
+            <caption>SYNAPSE versus matched-scorer MCP baseline</caption>
+            <thead><tr><th>METRIC</th><th>SYNAPSE</th><th>MCP FLAT</th><th>INTERPRETATION</th></tr></thead>
             <tbody>
-              <tr>
-                <th scope="row">synapse_only</th>
-                <td>0.811</td>
-                <td>0.822</td>
-                <td>0.914</td>
-              </tr>
-              <tr>
-                <th scope="row">synapse8</th>
-                <td>0.633</td>
-                <td>0.411</td>
-                <td>0.457</td>
-              </tr>
-              <tr>
-                <th scope="row">synapse32</th>
-                <td>0.567</td>
-                <td>0.389</td>
-                <td>0.432</td>
-              </tr>
-              <tr>
-                <th scope="row">lexical32</th>
-                <td>0.578</td>
-                <td>0.100</td>
-                <td>0.429</td>
-              </tr>
+              <tr><th>Context tokens / turn</th><td>971</td><td>7,088,086</td><td>7,300x smaller</td></tr>
+              <tr><th>Cost / task</th><td>$0.0073</td><td>$53.16</td><td>7,300x cheaper</td></tr>
+              <tr><th>Task success hit@k</th><td>0.640</td><td>0.000</td><td>MCP context overflow</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="bar-set" aria-label="Relative benchmark values">
+          <div class="bar-row"><span>CONTEXT SAVED</span><div class="bar"><span>███████████████████████████████████████</span>░</div><span class="bar-value">99.986%</span></div>
+          <div class="bar-row"><span>SYNAPSE HIT@K</span><div class="bar"><span>█████████████████████████</span>░░░░░░░░░░░░░░</div><span class="bar-value">0.640</span></div>
+          <div class="bar-row"><span>MCP HIT@K</span><div class="bar">░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░</div><span class="bar-value">0.000</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal" id="protocol" aria-labelledby="protocol-title">
+      <header class="section-head">
+        <p class="kicker">02 / protocol</p>
+        <h2 id="protocol-title">Three planes.<br>One bounded interface.</h2>
+        <p>Storage, resolution, and interaction are separate. The model never receives the whole catalogue; it requests structure only when needed.</p>
+      </header>
+      <div class="grid grid-3">
+        <article class="frame card" data-title="knowledge_plane">
+          <span class="card-number">01</span>
+          <h3>Capability graph</h3>
+          <p>Signed capability, type, provider, and concept nodes allow typed expansion and integrity checks outside prompt context.</p>
+        </article>
+        <article class="frame card" data-title="resolution_plane">
+          <span class="card-number">02</span>
+          <h3>Hybrid resolver</h3>
+          <p>Semantic, lexical, ontology, graph, and type-fit signals produce a shortlist with calibrated confidence.</p>
+        </article>
+        <article class="frame card" data-title="interaction_plane">
+          <span class="card-number">03</span>
+          <h3>Six meta-verbs</h3>
+          <p><code>intend / focus / plan / invoke / observe / feedback</code> form the constant model-facing surface.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section reveal" id="jev" aria-labelledby="jev-title">
+      <header class="section-head">
+        <p class="kicker">03 / Jev baseline</p>
+        <h2 id="jev-title">Reranking the shortlist.</h2>
+        <p>If Jev receives a bounded shortlist, can it select the best tool more accurately than SYNAPSE top-1? Not in this experiment—but the result is not a general verdict on Jev.</p>
+      </header>
+      <div class="frame" data-title="jev_benchmark.tsv">
+        <div class="table-wrap">
+          <table>
+            <caption>90 real tasks / seed 1 / hit@1</caption>
+            <thead><tr><th>ARM</th><th>T=300</th><th>T=1000</th><th>T=1000 CONDITIONAL</th></tr></thead>
+            <tbody>
+              <tr><th>synapse_only</th><td>0.811</td><td>0.822</td><td>0.914</td></tr>
+              <tr><th>synapse8</th><td>0.633</td><td>0.411</td><td>0.457</td></tr>
+              <tr><th>synapse32</th><td>0.567</td><td>0.389</td><td>0.432</td></tr>
+              <tr><th>lexical32</th><td>0.578</td><td>0.100</td><td>0.429</td></tr>
             </tbody>
           </table>
         </div>
       </div>
-
-      <div class="card-grid card-grid-two">
-        <article class="info-card">
-          <h3>Takeaway</h3>
-          <ul class="bullet-list compact">
-            <li>Resolver top-1 beats every tested Jev reranking arm at both scales.</li>
-            <li>A larger Jev shortlist is slightly worse than a smaller one.</li>
-            <li>Every tested arm correctly abstains on all 5 impossible tasks.</li>
-          </ul>
+      <div class="grid grid-2" style="margin-top:2rem">
+        <article class="frame card" data-title="takeaway">
+          <h3>Observed</h3>
+          <ul><li>Resolver top-1 wins at both scales.</li><li>Larger Jev shortlists perform slightly worse.</li><li>All arms abstain on all five impossible tasks.</li></ul>
         </article>
-        <article class="info-card">
-          <h3>Interpretation</h3>
-          <ul class="bullet-list compact">
-            <li>Many Jev mistakes are textual look-alikes.</li>
-            <li>Jev does not receive the resolver's graph/type-fit structural signal.</li>
-            <li>This is not presented as a general verdict on Jev itself.</li>
-          </ul>
+        <article class="frame card" data-title="interpretation">
+          <h3>Why</h3>
+          <ul><li>Many Jev mistakes are textual look-alikes.</li><li>Jev lacks graph and type-fit structural signals.</li><li>Lexical32 gold recall falls to 0.233 at T=1000.</li></ul>
         </article>
       </div>
-
-      <div class="details-stack">
-        <details class="detail-card" open>
-          <summary>
-            <span>T = 300 detailed per-arm breakdown</span>
-            <span class="detail-meta">with tag • no tag • shortlist recall • abstention</span>
-          </summary>
-          <div class="table-scroll">
-            <table>
-              <caption class="sr-only">Detailed Jev results at T equals three hundred</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Arm</th>
-                  <th scope="col">hit@1</th>
-                  <th scope="col">with tag</th>
-                  <th scope="col">no tag</th>
-                  <th scope="col">gold in list</th>
-                  <th scope="col">conditional hit@1</th>
-                  <th scope="col">real-task abstain</th>
-                  <th scope="col">should-miss abstain</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><th scope="row">synapse8</th><td>0.633</td><td>0.758</td><td>0.292</td><td>0.878</td><td>0.722</td><td>0.156</td><td>5/5</td></tr>
-                <tr><th scope="row">synapse32</th><td>0.567</td><td>0.652</td><td>0.333</td><td>0.878</td><td>0.646</td><td>0.156</td><td>5/5</td></tr>
-                <tr><th scope="row">lexical32</th><td>0.578</td><td>0.606</td><td>0.500</td><td>1.000</td><td>0.578</td><td>0.033</td><td>5/5</td></tr>
-                <tr><th scope="row">synapse_only</th><td>0.811</td><td>0.909</td><td>0.542</td><td>0.878</td><td>0.924</td><td>0.122</td><td>5/5</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </details>
-
-        <details class="detail-card" open>
-          <summary>
-            <span>T = 1000 detailed per-arm breakdown</span>
-            <span class="detail-meta">shortlist recall collapse is visible for lexical32</span>
-          </summary>
-          <div class="table-scroll">
-            <table>
-              <caption class="sr-only">Detailed Jev results at T equals one thousand</caption>
-              <thead>
-                <tr>
-                  <th scope="col">Arm</th>
-                  <th scope="col">hit@1</th>
-                  <th scope="col">with tag</th>
-                  <th scope="col">no tag</th>
-                  <th scope="col">gold in list</th>
-                  <th scope="col">conditional hit@1</th>
-                  <th scope="col">real-task abstain</th>
-                  <th scope="col">should-miss abstain</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr><th scope="row">synapse8</th><td>0.411</td><td>0.530</td><td>0.083</td><td>0.900</td><td>0.457</td><td>0.122</td><td>5/5</td></tr>
-                <tr><th scope="row">synapse32</th><td>0.389</td><td>0.515</td><td>0.042</td><td>0.900</td><td>0.432</td><td>0.122</td><td>5/5</td></tr>
-                <tr><th scope="row">lexical32</th><td>0.100</td><td>0.136</td><td>0.000</td><td>0.233</td><td>0.429</td><td>0.200</td><td>5/5</td></tr>
-                <tr><th scope="row">synapse_only</th><td>0.822</td><td>0.909</td><td>0.583</td><td>0.900</td><td>0.914</td><td>0.100</td><td>5/5</td></tr>
-              </tbody>
-            </table>
-          </div>
-        </details>
-
-        <details class="detail-card">
-          <summary>
-            <span>Error analysis when the gold capability was already in the shortlist</span>
-            <span class="detail-meta">look-alikes dominate Jev's misses</span>
-          </summary>
-          <div class="split-tables">
-            <div class="table-scroll">
-              <table>
-                <caption>T = 300 error analysis</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Arm</th>
-                    <th scope="col">Errors</th>
-                    <th scope="col">Look-alike</th>
-                    <th scope="col">Different capability</th>
-                    <th scope="col">Abstained</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><th scope="row">synapse8</th><td>22</td><td>11</td><td>8</td><td>3</td></tr>
-                  <tr><th scope="row">synapse32</th><td>28</td><td>18</td><td>7</td><td>3</td></tr>
-                  <tr><th scope="row">lexical32</th><td>38</td><td>23</td><td>12</td><td>3</td></tr>
-                  <tr><th scope="row">synapse_only</th><td>6</td><td>0</td><td>6</td><td>0</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <div class="table-scroll">
-              <table>
-                <caption>T = 1000 error analysis</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Arm</th>
-                    <th scope="col">Errors</th>
-                    <th scope="col">Look-alike</th>
-                    <th scope="col">Different capability</th>
-                    <th scope="col">Abstained</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><th scope="row">synapse8</th><td>44</td><td>31</td><td>11</td><td>2</td></tr>
-                  <tr><th scope="row">synapse32</th><td>46</td><td>34</td><td>10</td><td>2</td></tr>
-                  <tr><th scope="row">lexical32</th><td>12</td><td>7</td><td>5</td><td>0</td></tr>
-                  <tr><th scope="row">synapse_only</th><td>7</td><td>0</td><td>7</td><td>0</td></tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </details>
-      </div>
-
-      <div class="card-grid card-grid-two">
-        <article class="info-card">
-          <h3>Why the reranker loses here</h3>
-          <p>
-            Jev often selects a textual look-alike because it only sees summaries, tags, and type strings,
-            while the resolver also benefits from graph structure and type-fit signals. That is the right
-            reading of the result here; it should not be generalized into a broad claim that Jev is worse
-            in every setting.
-          </p>
-        </article>
-        <article class="info-card">
-          <h3>Why lexical32 collapses at T = 1000</h3>
-          <p>
-            The main issue is shortlist recall. The gold capability appears in the lexical top-32 only 23%
-            of the time, so Jev cannot recover once the correct option is absent. When the gold is present,
-            lexical32 reaches 0.429 conditional hit@1.
-          </p>
-        </article>
-      </div>
+      <details class="frame" data-title="expanded_records">
+        <summary>Detailed T=1000 record</summary>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>ARM</th><th>HIT@1</th><th>WITH TAG</th><th>NO TAG</th><th>GOLD IN LIST</th><th>REAL ABSTAIN</th></tr></thead>
+            <tbody>
+              <tr><th>synapse8</th><td>0.411</td><td>0.530</td><td>0.083</td><td>0.900</td><td>0.122</td></tr>
+              <tr><th>synapse32</th><td>0.389</td><td>0.515</td><td>0.042</td><td>0.900</td><td>0.122</td></tr>
+              <tr><th>lexical32</th><td>0.100</td><td>0.136</td><td>0.000</td><td>0.233</td><td>0.200</td></tr>
+              <tr><th>synapse_only</th><td>0.822</td><td>0.909</td><td>0.583</td><td>0.900</td><td>0.100</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
     </section>
 
-    <section class="section" id="methodology" aria-labelledby="methodology-title">
-      <div class="section-heading">
-        <p class="eyebrow">Methodology and reproducibility</p>
-        <h2 id="methodology-title">What to trust, what to caveat, and how to reproduce it</h2>
-        <p>
-          This site intentionally keeps the caveats close to the results. The artifact is reproducible, but
-          the experiments still make bounded claims, especially for the new Jev baseline.
-        </p>
-      </div>
-
-      <div class="card-grid card-grid-two">
-        <article class="info-card">
-          <h3>Core limitations</h3>
-          <ul class="bullet-list">
-            <li>Synthetic catalogue rather than a production tool ecosystem.</li>
-            <li>Reference ANN path has wall-clock growth; the paper's claim is about prompt context, not this brute-force implementation's runtime.</li>
-            <li>Single benchmark framing with 90 real tasks and 5 impossible tasks.</li>
-            <li>Tag-withheld tasks remain the main source of SYNAPSE degradation.</li>
+    <section class="section reveal" id="methodology" aria-labelledby="methodology-title">
+      <header class="section-head">
+        <p class="kicker">04 / methodology</p>
+        <h2 id="methodology-title">Trust the artifact.<br>Read the caveats.</h2>
+        <p>The evidence is reproducible, but its claims are bounded. Limitations remain adjacent to the results—not hidden in fine print.</p>
+      </header>
+      <div class="grid grid-2">
+        <article class="frame card" data-title="limitations">
+          <h3>Core limits</h3>
+          <ul>
+            <li>Synthetic catalogue, not a production ecosystem.</li>
+            <li>Reference ANN wall-clock grows; the claim concerns prompt context.</li>
+            <li>90 real tasks plus five impossible tasks.</li>
+            <li>Tag-withheld tasks drive remaining degradation.</li>
           </ul>
         </article>
-        <article class="info-card">
-          <h3>Jev experiment caveats</h3>
-          <ul class="bullet-list">
-            <li>One seed, two catalogue sizes, one prompt wording, and a synthetic catalogue.</li>
-            <li>The Jev-only full-catalog tournament was not completed because of upstream HTTP 429 rate limits.</li>
-            <li><code>PYTHONHASHSEED</code> tie sensitivity changes resolver outputs by roughly ±1 percentage point; the Jev exporter pins seed 0, but <code>run_all.py</code> currently does not.</li>
-            <li>Jev is not bit-deterministic, model alias/version is not pinned, and responses are cached and de-duplicated.</li>
+        <article class="frame card" data-title="jev_caveats">
+          <h3>Jev limits</h3>
+          <ul>
+            <li>One seed, two catalogue sizes, one prompt wording.</li>
+            <li>Full-catalog tournament stopped on upstream HTTP 429s.</li>
+            <li>Model alias/version is not pinned.</li>
+            <li>Responses are cached and de-duplicated.</li>
           </ul>
         </article>
       </div>
-
-      <div class="repro-grid">
-        <article class="data-card">
-          <div class="data-card-head">
-            <h3>Main artifact reproduction</h3>
-            <p>Generate the paper figures, benchmark CSVs, and site-linked assets</p>
-          </div>
-          <pre class="code-block"><code>pip install -r requirements.txt
-python run_all.py</code></pre>
-          <div class="data-card-head verification-head">
-            <h3>Verification</h3>
-            <p>Run the repository tests separately after reproduction.</p>
-          </div>
-          <pre class="code-block"><code>pytest -q tests/</code></pre>
+      <div class="grid grid-2" style="margin-top:2rem">
+        <article class="frame" data-title="reproduce_core.sh">
+          <h3>Main artifact</h3>
+<pre class="terminal"><code>pip install -r requirements.txt
+python run_all.py
+pytest -q tests/</code></pre>
         </article>
-        <article class="data-card">
-          <div class="data-card-head">
-            <h3>Jev baseline reproduction</h3>
-            <p>Cached and offline-compatible once the bundled cache is unpacked</p>
-          </div>
-          <pre class="code-block"><code>cd experiments/jev
+        <article class="frame" data-title="reproduce_jev.sh">
+          <h3>Jev baseline</h3>
+<pre class="terminal"><code>cd experiments/jev
 npm ci
 python export_catalog.py --T 300 1000 --seeds 1
-node jev_bench.mjs --data data/T300_s1.json --arms synapse8,synapse32,lexical32
-node jev_bench.mjs --data data/T1000_s1.json --arms synapse8,synapse32,lexical32
-python summarize.py results/T300_s1_synapse8-synapse32-lexical32.json \
-  results/T1000_s1_synapse8-synapse32-lexical32.json</code></pre>
+node jev_bench.mjs --data data/T300_s1.json
+python summarize.py results/*.json</code></pre>
         </article>
       </div>
     </section>
 
-    <section class="section cta-section" id="reproduce" aria-labelledby="reproduce-title">
-      <div class="section-heading narrow">
-        <p class="eyebrow">Source, paper, and data</p>
-        <h2 id="reproduce-title">Follow the evidence all the way back to the repo</h2>
-        <p>
-          The site is only a front door. The underlying source, paper, Jev experiment write-up, and full
-          summary tables all live in the repository and are linked directly here.
-        </p>
-      </div>
-
-      <div class="link-grid">
-        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener noreferrer">
-          <strong>Repository source</strong>
-          <span>Browse code, results, tests, and docs.</span>
-        </a>
-        <a class="link-card" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener noreferrer">
-          <strong>Paper PDF</strong>
-          <span>Read the main SYNAPSE manuscript.</span>
-        </a>
-        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE/blob/main/experiments/jev/README.md" target="_blank" rel="noopener noreferrer">
-          <strong>Jev experiment README</strong>
-          <span>Design, interpretation, and reproduction notes.</span>
-        </a>
-        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE/blob/main/experiments/jev/results/summary.md" target="_blank" rel="noopener noreferrer">
-          <strong>Full Jev summary</strong>
-          <span>Detailed tables and error analysis.</span>
-        </a>
-        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE/blob/main/README.md" target="_blank" rel="noopener noreferrer">
-          <strong>Reproduction instructions</strong>
-          <span>Main artifact commands and outputs.</span>
-        </a>
-        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE/blob/main/paper/paper.md" target="_blank" rel="noopener noreferrer">
-          <strong>Readable paper source</strong>
-          <span>Open the Markdown paper text in GitHub.</span>
-        </a>
+    <section class="section reveal" id="reproduce" aria-labelledby="reproduce-title">
+      <header class="section-head">
+        <p class="kicker">05 / source and data</p>
+        <h2 id="reproduce-title">Follow the evidence.</h2>
+        <p>The site is an interface. Source code, paper, experiment notes, result tables, and exact commands live in the repository.</p>
+      </header>
+      <div class="grid grid-3">
+        <a class="frame link-card" data-title="link_01" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener noreferrer"><strong>Repository source</strong><span>Code, results, tests, and docs.</span></a>
+        <a class="frame link-card" data-title="link_02" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener noreferrer"><strong>Paper PDF</strong><span>Main SYNAPSE manuscript.</span></a>
+        <a class="frame link-card" data-title="link_03" href="https://github.com/Debsasish/SYNAPSE/blob/main/experiments/jev/README.md" target="_blank" rel="noopener noreferrer"><strong>Jev README</strong><span>Design and reproduction notes.</span></a>
+        <a class="frame link-card" data-title="link_04" href="https://github.com/Debsasish/SYNAPSE/blob/main/experiments/jev/results/summary.md" target="_blank" rel="noopener noreferrer"><strong>Jev summary</strong><span>Detailed tables and error analysis.</span></a>
+        <a class="frame link-card" data-title="link_05" href="https://github.com/Debsasish/SYNAPSE/blob/main/README.md" target="_blank" rel="noopener noreferrer"><strong>Instructions</strong><span>Main artifact commands and outputs.</span></a>
+        <a class="frame link-card" data-title="link_06" href="https://github.com/Debsasish/SYNAPSE/blob/main/paper/paper.md" target="_blank" rel="noopener noreferrer"><strong>Paper source</strong><span>Readable Markdown manuscript.</span></a>
       </div>
     </section>
 
-    <section class="section citation-section" id="cite" aria-labelledby="cite-title">
-      <div class="section-heading narrow">
-        <p class="eyebrow">Citation and contact surface</p>
-        <h2 id="cite-title">Use the artifact responsibly</h2>
-        <p>
-          Cite the work, read the caveats, and inspect the repository if you want to build on the
-          protocol or compare against the Jev baseline in another setup.
-        </p>
-      </div>
-
-      <div class="citation-card">
-        <div>
-          <h3>Suggested citation</h3>
-          <pre class="code-block" id="citation-block"><code>@article{tripathy2026synapse,
-  title   = {SYNAPSE: Scale-Invariant Capability Activation for Large Language Model Agents via a Capability Knowledge Graph},
-  author  = {Tripathy, Debasish},
-  year    = {2026},
-  url     = {https://github.com/Debsasish/SYNAPSE}
+    <section class="section reveal" id="cite" aria-labelledby="cite-title">
+      <header class="section-head">
+        <p class="kicker">06 / citation</p>
+        <h2 id="cite-title">Use responsibly.</h2>
+      </header>
+      <div class="frame citation" data-title="citation.bib">
+<pre class="terminal" id="citation-block"><code>@article{tripathy2026synapse,
+  title  = {SYNAPSE: Scale-Invariant Capability Activation
+            for Large Language Model Agents via a CKG},
+  author = {Tripathy, Debasish},
+  year   = {2026},
+  url    = {https://github.com/Debsasish/SYNAPSE}
 }</code></pre>
-        </div>
-        <button class="button copy-button" type="button" data-copy-target="citation-block">Copy citation</button>
+        <button class="ascii-button copy-button" type="button" data-copy-target="citation-block">Copy citation</button>
       </div>
     </section>
   </main>
 
   <footer class="site-footer">
-    <div>
-      <p class="footer-mark">SYNAPSE</p>
-      <p class="footer-copy">Scale-invariant capability activation for LLM agents, presented as a static research site for GitHub Pages.</p>
-    </div>
-    <nav class="footer-nav" aria-label="Footer links">
-      <a href="#top">Top</a>
-      <a href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener noreferrer">GitHub</a>
-      <a href="assets/SYNAPSE.pdf" target="_blank" rel="noopener noreferrer">Paper</a>
-      <a href="https://github.com/Debsasish/SYNAPSE/blob/main/experiments/jev/results/summary.md" target="_blank" rel="noopener noreferrer">Jev summary</a>
-    </nav>
+    <div><strong class="footer-logo">SYNAPSE</strong><br>EOF // SCALE WITHOUT CONTEXT COLLAPSE</div>
+    <nav aria-label="Footer links"><a href="#top">Top</a><a href="https://github.com/Debsasish/SYNAPSE">GitHub</a><a href="assets/SYNAPSE.pdf">Paper</a></nav>
   </footer>
 
-  <script src="script.js"></script>
+  <script>
+    (() => {
+      "use strict";
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      const title = document.querySelector("[data-decode]");
+      const glyphs = "01<>/\\|[]{}+-=*#";
+
+      if (title && !reducedMotion.matches) {
+        const text = title.dataset.decode;
+        let frame = 0;
+        title.textContent = "";
+        const decode = () => {
+          frame += 1;
+          const settled = Math.floor(frame / 2);
+          title.textContent = Array.from(text, (char, index) => {
+            if (char === " " || index < settled) return char;
+            return glyphs[Math.floor(Math.random() * glyphs.length)];
+          }).join("");
+          if (settled < text.length) window.setTimeout(decode, 32);
+          else title.textContent = text;
+        };
+        decode();
+      }
+
+      document.querySelectorAll(".copy-button").forEach((button) => {
+        const label = button.textContent;
+        button.addEventListener("click", async () => {
+          const source = document.getElementById(button.dataset.copyTarget);
+          if (!source) return;
+          try {
+            await navigator.clipboard.writeText(source.innerText.trim());
+            button.textContent = "Copied // OK";
+          } catch (_) {
+            button.textContent = "Copy failed";
+          }
+          window.setTimeout(() => { button.textContent = label; }, 1600);
+        });
+      });
+
+      const reveals = document.querySelectorAll(".reveal");
+      if ("IntersectionObserver" in window && !reducedMotion.matches) {
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("visible");
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { threshold: .08 });
+        reveals.forEach((element) => observer.observe(element));
+      } else {
+        reveals.forEach((element) => element.classList.add("visible"));
+      }
+
+      const canvas = document.getElementById("ascii-field");
+      const context = canvas && canvas.getContext("2d");
+      if (!canvas || !context) return;
+      let width = 0;
+      let height = 0;
+      let columns = [];
+      let animationFrame = 0;
+      let lastPaint = 0;
+      const chars = "01.:+*#░▒▓";
+
+      const resize = () => {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        width = window.innerWidth;
+        height = window.innerHeight;
+        canvas.width = Math.floor(width * dpr);
+        canvas.height = Math.floor(height * dpr);
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        context.setTransform(dpr, 0, 0, dpr, 0, 0);
+        columns = Array.from({ length: Math.ceil(width / 18) }, () => Math.random() * -40);
+      };
+
+      const paint = (time = 0) => {
+        if (time - lastPaint > 65 || !lastPaint) {
+          context.fillStyle = "rgba(2, 8, 6, .12)";
+          context.fillRect(0, 0, width, height);
+          context.fillStyle = "#55ce76";
+          context.font = "12px monospace";
+          columns.forEach((row, index) => {
+            const character = chars[Math.floor(Math.random() * chars.length)];
+            context.fillText(character, index * 18, row * 18);
+            columns[index] = row * 18 > height && Math.random() > .985 ? -1 : row + .42;
+          });
+          lastPaint = time;
+        }
+        animationFrame = window.requestAnimationFrame(paint);
+      };
+
+      const setMotion = () => {
+        window.cancelAnimationFrame(animationFrame);
+        resize();
+        context.clearRect(0, 0, width, height);
+        if (!reducedMotion.matches) animationFrame = window.requestAnimationFrame(paint);
+      };
+      window.addEventListener("resize", resize, { passive: true });
+      reducedMotion.addEventListener("change", setMotion);
+      setMotion();
+    })();
+  </script>
 </body>
 </html>

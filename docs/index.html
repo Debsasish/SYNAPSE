@@ -1,420 +1,634 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SYNAPSE — Scale-Invariant Capability Activation for LLM Agents</title>
-<meta name="description" content="SYNAPSE is a protocol that decouples capability availability from context presence, giving LLM agents O(1) per-turn context instead of the O(T) growth that makes MCP and A2A worse as they scale." />
-<meta property="og:title" content="SYNAPSE: Scale-Invariant Capability Activation for LLM Agents" />
-<meta property="og:description" content="More tools should not make an agent worse. SYNAPSE keeps per-turn context constant while flat protocols collapse." />
-<meta property="og:type" content="website" />
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css" integrity="sha384-n8MVd4RsNIU0tAv4ct0nTaAbDJwPJzDEaqSD1odI+WdtXRGWt2kTvGFasHpSy3SV" crossorigin="anonymous" />
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism-tomorrow.min.css" />
-<link rel="stylesheet" href="styles.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SYNAPSE — Scale-invariant capability activation for LLM agents</title>
+  <meta
+    name="description"
+    content="SYNAPSE is a scale-invariant protocol for tool-augmented LLM agents. Explore the benchmark results, Jev comparison, methodology, and reproduction links for the SYNAPSE research artifact."
+  />
+  <meta property="og:title" content="SYNAPSE — Scale-invariant capability activation for LLM agents" />
+  <meta
+    property="og:description"
+    content="A responsive research site for SYNAPSE with headline benchmark results, honest caveats, and the merged Jev reranker comparison."
+  />
+  <meta property="og:type" content="website" />
+  <meta name="theme-color" content="#050816" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <a class="skip-link" href="#main">Skip to content</a>
 
-<canvas id="graph-bg" aria-hidden="true"></canvas>
-
-<!-- ================= NAV ================= -->
-<header id="nav">
-  <a class="brand" href="#home">
-    <span class="brand-mark" aria-hidden="true"></span>
-    <span class="brand-text">SYNAPSE</span>
-  </a>
-  <nav class="nav-links">
-    <a href="#problem">Problem</a>
-    <a href="#results">Results</a>
-    <a href="#approach">Approach</a>
-    <a href="#theory">Theory</a>
-    <a href="#code">Code</a>
-    <a href="#cite">Cite</a>
-  </nav>
-  <a class="nav-cta" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">GitHub ↗</a>
-  <button id="menu-toggle" aria-label="Toggle menu">☰</button>
-</header>
-
-<!-- ================= HERO ================= -->
-<section id="home" class="hero">
-  <div class="hero-inner reveal">
-    <div class="tagline-pill">A new protocol for tool-augmented LLM agents</div>
-    <h1 class="hero-title">
-      <span class="grad">SYNAPSE</span>
-    </h1>
-    <p class="hero-sub">Scale-Invariant Capability Activation for Large Language Model Agents via a Capability Knowledge Graph</p>
-    <p class="hero-author">Debasish Tripathy</p>
-    <p class="hero-lede">
-      Today's agent protocols inject every tool description into the model's context, so
-      per-turn cost grows <em>linearly</em> with the number of tools. More tools make the agent
-      <em>worse</em>. SYNAPSE breaks that coupling: capabilities live in a signed knowledge graph,
-      the model only ever sees six fixed verbs, and per-turn context stays <strong>constant</strong>.
-    </p>
-    <div class="hero-buttons">
-      <a class="btn btn-primary" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener">
-        <span class="btn-ico">📄</span> Read the Paper
+  <header class="site-header" id="top">
+    <div class="header-shell">
+      <a class="brand" href="#hero" aria-label="SYNAPSE home">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="brand-label">
+          <strong>SYNAPSE</strong>
+          <span>Scale-invariant capability activation</span>
+        </span>
       </a>
-      <a class="btn" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">
-        <span class="btn-ico">⌥</span> Source Code
-      </a>
-      <a class="btn" href="#cite">
-        <span class="btn-ico">❝</span> Cite
+
+      <button
+        class="nav-toggle"
+        type="button"
+        aria-expanded="false"
+        aria-controls="site-nav"
+        aria-label="Toggle navigation"
+      >
+        <span></span><span></span><span></span>
+      </button>
+
+      <nav class="site-nav" id="site-nav" aria-label="Primary navigation">
+        <a href="#results">Results</a>
+        <a href="#protocol">Protocol</a>
+        <a href="#jev">Jev baseline</a>
+        <a href="#methodology">Methodology</a>
+        <a href="#reproduce">Reproduce</a>
+        <a href="#cite">Cite</a>
+      </nav>
+
+      <a
+        class="header-cta"
+        href="https://github.com/Debsasish/SYNAPSE"
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        Repository
       </a>
     </div>
-  </div>
+  </header>
 
-  <div class="hero-stats reveal">
-    <div class="stat">
-      <div class="stat-num"><span class="count" data-target="7300" data-suffix="&times;">0</span></div>
-      <div class="stat-label">less context at T=100k</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">O(1)</div>
-      <div class="stat-label">context vs MCP's &Theta;(T)</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num">$<span class="count" data-target="53" data-suffix="">0</span></div>
-      <div class="stat-label">MCP cost/task vs $0.007</div>
-    </div>
-    <div class="stat">
-      <div class="stat-num"><span class="count" data-target="6" data-suffix="">0</span></div>
-      <div class="stat-label">fixed meta-verbs, any T</div>
-    </div>
-  </div>
-  <div class="scroll-hint" aria-hidden="true">scroll</div>
-</section>
+  <main id="main">
+    <section class="hero" id="hero" aria-labelledby="hero-title">
+      <canvas id="hero-canvas" aria-hidden="true"></canvas>
+      <div class="hero-noise" aria-hidden="true"></div>
+      <div class="hero-shell">
+        <div class="hero-copy">
+          <p class="eyebrow">Research artifact • GitHub Pages edition</p>
+          <h1 id="hero-title">More tools should not make an agent worse.</h1>
+          <p class="hero-lede">
+            SYNAPSE keeps the model-facing tool surface constant while the capability catalogue scales.
+            Instead of injecting every tool into prompt context, it resolves a compact activation set from
+            a signed capability graph and exposes only six fixed meta-verbs.
+          </p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener noreferrer">Read the paper</a>
+            <a class="button" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener noreferrer">Open source</a>
+            <a class="button" href="#jev">See the Jev comparison</a>
+          </div>
+          <p class="hero-footnote">
+            Measured on 90 real tasks plus 5 impossible-task abstention checks, with honest reporting of the
+            synthetic-catalog and wall-clock limitations.
+          </p>
+        </div>
 
-<!-- ================= PROBLEM ================= -->
-<section id="problem" class="section">
-  <div class="section-head reveal">
-    <span class="eyebrow">The scaling paradox</span>
-    <h2>Flat protocols get worse as they grow</h2>
-    <p class="section-lede">
-      MCP and A2A present every registered tool in-context on every turn. That is an O(T) tax in
-      the number of tools T. Beyond the context window, the right tools get truncated away and
-      selection accuracy collapses. This is structural, not a tuning problem.
-    </p>
-  </div>
-  <div class="problem-grid">
-    <div class="prob-card reveal">
-      <div class="prob-ico">🧱</div>
-      <h3>Context exhaustion</h3>
-      <p>Thousands of tool schemas overflow even long windows and evict the task-relevant content.</p>
-    </div>
-    <div class="prob-card reveal">
-      <div class="prob-ico">💸</div>
-      <h3>Cost inflation</h3>
-      <p>Every turn re-pays for every tool's tokens. Cost scales with catalog size, not task difficulty.</p>
-    </div>
-    <div class="prob-card reveal">
-      <div class="prob-ico">📉</div>
-      <h3>Accuracy collapse</h3>
-      <p>Larger prompts dilute attention and add near-duplicate distractors, so selection quality falls.</p>
-    </div>
-  </div>
-  <div class="compare reveal">
-    <div class="compare-row compare-head">
-      <span>At T = 100,000 tools</span><span>MCP (flat)</span><span>SYNAPSE</span>
-    </div>
-    <div class="compare-row">
-      <span>Per-turn context</span><span class="bad">7,088,086 tok</span><span class="good">971 tok</span>
-    </div>
-    <div class="compare-row">
-      <span>Cost per task</span><span class="bad">$53.16</span><span class="good">$0.0073</span>
-    </div>
-    <div class="compare-row">
-      <span>Selection accuracy (hit@k)</span><span class="bad">0.00</span><span class="good">0.64</span>
-    </div>
-    <div class="compare-row">
-      <span>Growth in T</span><span class="bad">&Theta;(T)</span><span class="good">O(1)</span>
-    </div>
-  </div>
-</section>
-
-<!-- ================= RESULTS ================= -->
-<section id="results" class="section">
-  <div class="section-head reveal">
-    <span class="eyebrow">Measured, not modeled</span>
-    <h2>Results across 6 scales &times; 5 seeds</h2>
-    <p class="section-lede">
-      A faithful, matched-scorer MCP baseline (identical embedder and cosine scorer, no strawman)
-      across T = 300 to 100,000. Every number is regenerated from seed by one command. Click any
-      figure to enlarge.
-    </p>
-  </div>
-
-  <div class="gallery">
-    <figure class="fig-card reveal" data-full="assets/figures/fig5_scale_invariance_grid.png">
-      <img loading="lazy" src="assets/figures/fig5_scale_invariance_grid.png" alt="Scale-invariance grid" />
-      <figcaption>Scale-invariance overview: context, success, cost, precision@1.</figcaption>
-    </figure>
-    <figure class="fig-card reveal" data-full="assets/figures/fig1_context_per_turn.png">
-      <img loading="lazy" src="assets/figures/fig1_context_per_turn.png" alt="Per-turn context vs T" />
-      <figcaption>SYNAPSE context is flat; MCP grows &Theta;(T).</figcaption>
-    </figure>
-    <figure class="fig-card reveal" data-full="assets/figures/fig2_success_rate.png">
-      <img loading="lazy" src="assets/figures/fig2_success_rate.png" alt="Success rate vs T" />
-      <figcaption>MCP success collapses at scale; SYNAPSE decays gracefully.</figcaption>
-    </figure>
-    <figure class="fig-card reveal" data-full="assets/figures/fig10_theory_ceiling.png">
-      <img loading="lazy" src="assets/figures/fig10_theory_ceiling.png" alt="Visibility ceiling theory vs measurement" />
-      <figcaption>Theory vs measurement: the visibility-ceiling bound predicts the collapse.</figcaption>
-    </figure>
-    <figure class="fig-card reveal" data-full="assets/figures/fig3_cost_per_task.png">
-      <img loading="lazy" src="assets/figures/fig3_cost_per_task.png" alt="Cost per task vs T" />
-      <figcaption>Cost per task: flat for SYNAPSE, rising to $53 for MCP.</figcaption>
-    </figure>
-    <figure class="fig-card reveal" data-full="assets/figures/fig9_tag_breakdown.png">
-      <img loading="lazy" src="assets/figures/fig9_tag_breakdown.png" alt="Tag availability breakdown" />
-      <figcaption>Residual decay localizes to the tag-dropout subset.</figcaption>
-    </figure>
-    <figure class="fig-card reveal" data-full="assets/figures/fig6_ablation.png">
-      <img loading="lazy" src="assets/figures/fig6_ablation.png" alt="Resolver ablations" />
-      <figcaption>Every resolver signal contributes; semantic and tag channels dominate.</figcaption>
-    </figure>
-    <figure class="fig-card reveal" data-full="assets/figures/fig7_reliability.png">
-      <img loading="lazy" src="assets/figures/fig7_reliability.png" alt="Confidence reliability" />
-      <figcaption>Confidence calibration (pooled ECE = 0.138).</figcaption>
-    </figure>
-    <figure class="fig-card reveal" data-full="assets/figures/fig8_k_sweep.png">
-      <img loading="lazy" src="assets/figures/fig8_k_sweep.png" alt="Activation-set size sweep" />
-      <figcaption>Activation-set size k trades context for recall.</figcaption>
-    </figure>
-  </div>
-</section>
-
-<!-- ================= APPROACH ================= -->
-<section id="approach" class="section">
-  <div class="section-head reveal">
-    <span class="eyebrow">How it works</span>
-    <h2>Three planes, one bounded interface</h2>
-    <p class="section-lede">
-      SYNAPSE separates a knowledge plane, a resolution plane, and an interaction plane. Only the
-      interaction plane ever touches the model context, and its size never depends on T.
-    </p>
-  </div>
-  <div class="plane-grid">
-    <div class="plane-card reveal">
-      <div class="plane-num">01</div>
-      <h3>Capability Knowledge Graph</h3>
-      <p>
-        Tools, types, providers, and concepts are typed, HMAC-signed nodes with typed edges, stored
-        <em>outside</em> the model context. The store refuses to index a node whose signature does not
-        verify, giving tamper-evidence and supply-chain integrity.
-      </p>
-      <ul class="plane-list">
-        <li>Bounded type lattice with subtype order</li>
-        <li>Geometric neighborhood bound, no factor of T</li>
-        <li>Tiered disclosure: compact tier-1 vs full tier-3</li>
-      </ul>
-    </div>
-    <div class="plane-card reveal">
-      <div class="plane-num">02</div>
-      <h3>Hybrid Resolver</h3>
-      <p>
-        Maps an intent to a small activation set of at most k capabilities using five signals:
-        semantic, lexical, ontology-tag, graph-proximity, and type-fit. It runs entirely out of
-        context and returns a calibrated confidence.
-      </p>
-      <ul class="plane-list">
-        <li>Convex blend of five scoring signals</li>
-        <li>Grounded-miss abstention below a relevance floor</li>
-        <li>Signed, chainable resolution receipts</li>
-      </ul>
-    </div>
-    <div class="plane-card reveal">
-      <div class="plane-num">03</div>
-      <h3>Six Meta-Verbs</h3>
-      <p>
-        The only tool surface the model sees. Their JSON schemas are constant in size, so the model's
-        per-turn context does not grow with the catalog. Everything scalable happens beneath them.
-      </p>
-      <div class="verbs">
-        <span>intend</span><span>focus</span><span>plan</span>
-        <span>invoke</span><span>observe</span><span>feedback</span>
+        <aside class="hero-panel" aria-label="Headline benchmark summary">
+          <div class="hero-panel-head">
+            <p class="panel-label">Headline at T = 100,000</p>
+            <p class="panel-kicker">SYNAPSE vs. flat MCP baseline</p>
+          </div>
+          <dl class="hero-metrics">
+            <div>
+              <dt>Context tokens / turn</dt>
+              <dd>971 <span>vs 7,088,086</span></dd>
+              <p>7,300× smaller</p>
+            </div>
+            <div>
+              <dt>Cost / task</dt>
+              <dd>$0.0073 <span>vs $53.16</span></dd>
+              <p>7,300× cheaper</p>
+            </div>
+            <div>
+              <dt>Task success (hit@k)</dt>
+              <dd>0.640 <span>vs 0.000</span></dd>
+              <p>MCP overflows the context window</p>
+            </div>
+          </dl>
+          <pre class="ascii-panel" aria-hidden="true">
+  .       .   .      .      SYNAPSE
+     .-^-._   o   .         resolver
+  . /_/_\\_\\ .  .          graph → shortlist → verbs
+   /_/___\\_\\       .
+ . \_\___/_/    .          O(1) prompt surface
+    `-.-'   .
+          </pre>
+        </aside>
       </div>
-    </div>
-  </div>
-</section>
 
-<!-- ================= THEORY ================= -->
-<section id="theory" class="section">
-  <div class="section-head reveal">
-    <span class="eyebrow">Why the collapse is inevitable</span>
-    <h2>The visibility ceiling</h2>
-    <p class="section-lede">
-      The flat-protocol collapse is not a scorer artifact. It follows from first principles: a tool
-      can only be selected if its description fits inside the window. We derive a strict expectation
-      bound and the measured curve tracks it to within sampling error.
-    </p>
-  </div>
-  <div class="theory-wrap">
-    <div class="theorem reveal">
-      <div class="theorem-tag">Theorem 2 &middot; Visibility ceiling</div>
-      <div class="math-block" data-tex="\mathbb{E}[\text{hit@}k] \;\le\; \min\!\left(1,\ \frac{T^{*}}{T}\right), \qquad T^{*} = \frac{W}{\bar L}"></div>
-      <p>
-        With window W = 32,000 tokens and mean description length L&#772; &asymp; 70.9, the saturation
-        point is T* &asymp; 451. Beyond it, expected accuracy decays as &Theta;(1/T) and cannot be
-        rescued by a better scorer, only by removing tools from the window.
-      </p>
-    </div>
-    <div class="theory-cards">
-      <div class="tcard reveal">
-        <div class="math-inline" data-tex="C_{\mathrm{MCP}}(T) = B + \bar L\,T = \Theta(T)"></div>
-        <p>Flat protocols pay one token term per tool, every turn.</p>
+      <div class="hero-strip" aria-label="Research highlights">
+        <article>
+          <h2>MCP is stronger at small T</h2>
+          <p>At T = 300, MCP hit@k is 0.980 while SYNAPSE is 0.867. The crossover happens by T = 1000.</p>
+        </article>
+        <article>
+          <h2>Confidence is calibrated</h2>
+          <p>Pooled expected calibration error is 0.138, and impossible-task abstention is 1.000.</p>
+        </article>
+        <article>
+          <h2>Failure mode is explicit</h2>
+          <p>The remaining decay is localized to tag-withheld tasks rather than hidden in prompt truncation.</p>
+        </article>
       </div>
-      <div class="tcard reveal">
-        <div class="math-inline" data-tex="C_{\mathrm{SYN}}(T) = B + 6\,s_{\max} + k\,m = \kappa"></div>
-        <p>SYNAPSE context is a constant &kappa;, independent of T.</p>
+    </section>
+
+    <section class="section" id="results" aria-labelledby="results-title">
+      <div class="section-heading">
+        <p class="eyebrow">Benchmark results</p>
+        <h2 id="results-title">A cleaner information hierarchy for the scaling story</h2>
+        <p>
+          The main claim is simple: a flat protocol pays for the entire tool catalogue on every turn,
+          while SYNAPSE pays for a bounded interface. The result is dramatic at large scale, but the
+          site also preserves the uncomfortable parts of the story rather than hiding them.
+        </p>
       </div>
-      <div class="tcard reveal">
-        <div class="math-inline" data-tex="N_{\exp} = \sigma\cdot\frac{(\Delta^{+})^{D+1}-1}{\Delta^{+}-1}"></div>
-        <p>Neighborhood expansion is geometric in out-degree, never in T.</p>
+
+      <div class="card-grid card-grid-three">
+        <article class="info-card accent-cyan">
+          <h3>What scales</h3>
+          <p>SYNAPSE keeps the prompt interface fixed through six meta-verbs and an out-of-context resolver.</p>
+        </article>
+        <article class="info-card accent-violet">
+          <h3>What is measured</h3>
+          <p>Context tokens, cost, hit@k, reliability, ablations, and activation-size sweeps are all generated from the artifact.</p>
+        </article>
+        <article class="info-card accent-rose">
+          <h3>What is not claimed</h3>
+          <p>The catalogue is synthetic, the reference ANN path is not wall-clock optimal, and a live agent loop is not evaluated here.</p>
+        </article>
       </div>
-    </div>
-  </div>
-</section>
 
-<!-- ================= CODE ================= -->
-<section id="code" class="section">
-  <div class="section-head reveal">
-    <span class="eyebrow">Real, runnable code</span>
-    <h2>The six verbs are the whole surface</h2>
-    <p class="section-lede">
-      A complete, deterministic, offline reference implementation. Below is the actual meta-verb
-      interface and a minimal session.
-    </p>
-  </div>
-  <div class="code-tabs reveal">
-    <div class="tab-bar" role="tablist">
-      <button class="tab active" data-tab="t1">metaverbs.py</button>
-      <button class="tab" data-tab="t2">usage.py</button>
-      <button class="tab" data-tab="t3">run_all.py</button>
-    </div>
-    <div class="tab-panel active" id="t1">
-<pre><code class="language-python"># The only tool schemas the model ever sees. Fixed size, independent of T.
-META_VERB_SCHEMAS = [
-    {"name": "intend",  "description": "State a goal; receive a small ranked "
-                                       "set of relevant capabilities."},
-    {"name": "focus",   "description": "Expand full detail for one capability id."},
-    {"name": "plan",    "description": "Compute a type-safe executable DAG."},
-    {"name": "invoke",  "description": "Execute a capability or plan; get a "
-                                       "signed receipt."},
-    {"name": "observe", "description": "Query working memory for prior results."},
-    {"name": "feedback","description": "Report usefulness; update edge weights."},
-]
+      <div class="data-layout">
+        <article class="data-card data-card-strong">
+          <div class="data-card-head">
+            <h3>Main measured result</h3>
+            <p>T = 100,000 tools • matched-scorer baseline</p>
+          </div>
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">SYNAPSE versus MCP at one hundred thousand tools</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Metric</th>
+                  <th scope="col">SYNAPSE</th>
+                  <th scope="col">MCP</th>
+                  <th scope="col">Interpretation</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">Context tokens / turn</th>
+                  <td>971</td>
+                  <td>7,088,086</td>
+                  <td>7,300× smaller</td>
+                </tr>
+                <tr>
+                  <th scope="row">Cost / task</th>
+                  <td>$0.0073</td>
+                  <td>$53.16</td>
+                  <td>7,300× cheaper</td>
+                </tr>
+                <tr>
+                  <th scope="row">Task success hit@k</th>
+                  <td>0.640</td>
+                  <td>0.000</td>
+                  <td>MCP loses the gold tool to prompt overflow</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
 
-class SynapseSession:
-    """A stateful session exposing exactly the six meta-verbs."""
+        <article class="data-card honest-card">
+          <div class="data-card-head">
+            <h3>Scientific honesty, preserved</h3>
+            <p>The benchmark is not framed as an unconditional victory lap.</p>
+          </div>
+          <ul class="bullet-list">
+            <li><strong>MCP wins at T = 300:</strong> 0.980 vs 0.867.</li>
+            <li><strong>Crossover by T = 1000:</strong> large-catalog behavior is where SYNAPSE becomes preferable.</li>
+            <li><strong>Calibration is reported:</strong> pooled ECE = 0.138.</li>
+            <li><strong>Impossible-task abstention:</strong> 1.000.</li>
+            <li><strong>Task set:</strong> 90 real tasks, plus 5 should-miss tasks.</li>
+          </ul>
+        </article>
+      </div>
 
-    def intend(self, goal, tags=None, **constraints):
-        # Resolve OUTSIDE the model: returns an activation set of <= k tools.
-        return self.resolver.resolve(goal=goal, tags=tags or [], **constraints)
+      <div class="figure-grid">
+        <a class="figure-card" href="assets/figures/fig5_scale_invariance_grid.png" target="_blank" rel="noopener noreferrer">
+          <img src="assets/figures/fig5_scale_invariance_grid.png" alt="Scale-invariance grid showing context, success, cost, and precision trends across catalogue sizes." loading="lazy" />
+          <span>Scale overview</span>
+        </a>
+        <a class="figure-card" href="assets/figures/fig7_reliability.png" target="_blank" rel="noopener noreferrer">
+          <img src="assets/figures/fig7_reliability.png" alt="Reliability figure for SYNAPSE confidence calibration." loading="lazy" />
+          <span>Calibration and confidence</span>
+        </a>
+        <a class="figure-card" href="assets/figures/fig10_theory_ceiling.png" target="_blank" rel="noopener noreferrer">
+          <img src="assets/figures/fig10_theory_ceiling.png" alt="Visibility-ceiling figure comparing measured and theoretical collapse for flat protocols." loading="lazy" />
+          <span>Visibility ceiling intuition</span>
+        </a>
+      </div>
+    </section>
 
-    def plan(self, goal_type=None, goal_effect=None):
-        # Type-safe regression planner over the activated subgraph only.
-        activated = [it.id for it in self._last_activation.nodes]
-        return self.planner.plan(activated=activated, goal_type=goal_type)
-</code></pre>
-    </div>
-    <div class="tab-panel" id="t2">
-<pre><code class="language-python">from synapse import build_ckg, SynapseSession
+    <section class="section" id="protocol" aria-labelledby="protocol-title">
+      <div class="section-heading">
+        <p class="eyebrow">Protocol explanation</p>
+        <h2 id="protocol-title">Three planes, one bounded interface</h2>
+        <p>
+          SYNAPSE separates storage, resolution, and interaction. The model never receives the whole
+          catalogue. It receives a small interface and asks for structure only when it needs it.
+        </p>
+      </div>
 
-# 1. Load 100,000 tools into the signed knowledge graph (out of context).
-ckg = build_ckg(catalog)
+      <div class="protocol-grid">
+        <article class="protocol-card">
+          <span class="protocol-step">01</span>
+          <h3>Capability knowledge graph</h3>
+          <p>
+            Capabilities, types, providers, and concepts live in a signed graph outside prompt context,
+            enabling typed expansion and integrity checks without linear token growth.
+          </p>
+        </article>
+        <article class="protocol-card">
+          <span class="protocol-step">02</span>
+          <h3>Hybrid resolver</h3>
+          <p>
+            The resolver blends semantic, lexical, ontology-tag, graph-proximity, and type-fit signals
+            to return a small shortlist and a calibrated confidence estimate.
+          </p>
+        </article>
+        <article class="protocol-card">
+          <span class="protocol-step">03</span>
+          <h3>Six fixed meta-verbs</h3>
+          <p>
+            The model-facing surface stays constant: <code>intend</code>, <code>focus</code>,
+            <code>plan</code>, <code>invoke</code>, <code>observe</code>, and <code>feedback</code>.
+          </p>
+        </article>
+      </div>
 
-# 2. The model only ever sees six verbs, regardless of catalog size.
-session = SynapseSession(ckg)
+      <div class="callout-grid">
+        <article class="callout-card">
+          <h3>Why T matters</h3>
+          <p>Flat protocols spend tokens on every tool on every turn. SYNAPSE spends tokens on only the activated capability set.</p>
+        </article>
+        <article class="callout-card">
+          <h3>Where decay remains</h3>
+          <p>The remaining performance drop is mainly in tag-withheld cases rather than universal degradation as the catalogue grows.</p>
+        </article>
+        <article class="callout-card">
+          <h3>Why this is reproducible</h3>
+          <p>The repo includes figures, CSV outputs, a paper build, and tests, with a single-command reproduction path.</p>
+        </article>
+      </div>
+    </section>
 
-# 3. State an intent -> a small, bounded activation set comes back.
-activation = session.intend("scan a repo for SQL injection", tags=["cwe:89"])
-for node in activation.nodes:
-    print(node.id, node.summary, f"conf={node.confidence:.2f}")
+    <section class="section" id="jev" aria-labelledby="jev-title">
+      <div class="section-heading">
+        <p class="eyebrow">Merged today in PR #1</p>
+        <h2 id="jev-title">Jev reranking baseline over SYNAPSE shortlists</h2>
+        <p>
+          The new comparison asks a narrower question than the main paper: if Jev receives a bounded
+          shortlist, can it pick the best tool more accurately than the resolver's own top-1? The answer
+          in this experiment is no, but the interpretation matters.
+        </p>
+      </div>
 
-# 4. Plan a type-safe DAG and execute it with a signed receipt.
-plan = session.plan(goal_effect="report")
-result = session.invoke(plan=plan)
-print(result.receipt.receipt_id)   # auditable provenance, intent -> artifact
-</code></pre>
-    </div>
-    <div class="tab-panel" id="t3">
-<pre><code class="language-bash"># One command regenerates every number, table, and figure from seed.
-python run_all.py
+      <div class="data-card data-card-strong">
+        <div class="data-card-head">
+          <h3>Core Jev hit@1 table</h3>
+          <p>90 real tasks • seed 1 • two catalogue sizes</p>
+        </div>
+        <div class="table-scroll">
+          <table>
+            <caption class="sr-only">Jev comparison summary across shortlist strategies</caption>
+            <thead>
+              <tr>
+                <th scope="col">Arm</th>
+                <th scope="col">T = 300</th>
+                <th scope="col">T = 1000</th>
+                <th scope="col">T = 1000 hit@1 when gold is in shortlist</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">synapse_only</th>
+                <td>0.811</td>
+                <td>0.822</td>
+                <td>0.914</td>
+              </tr>
+              <tr>
+                <th scope="row">synapse8</th>
+                <td>0.633</td>
+                <td>0.411</td>
+                <td>0.457</td>
+              </tr>
+              <tr>
+                <th scope="row">synapse32</th>
+                <td>0.567</td>
+                <td>0.389</td>
+                <td>0.432</td>
+              </tr>
+              <tr>
+                <th scope="row">lexical32</th>
+                <td>0.578</td>
+                <td>0.100</td>
+                <td>0.429</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-# Deterministic and offline. No API keys, no network, no hidden state.
-# Outputs: results/*.csv, figures/*.pdf, paper/SYNAPSE.pdf
-</code></pre>
-    </div>
-  </div>
-</section>
+      <div class="card-grid card-grid-two">
+        <article class="info-card">
+          <h3>Takeaway</h3>
+          <ul class="bullet-list compact">
+            <li>Resolver top-1 beats every tested Jev reranking arm at both scales.</li>
+            <li>A larger Jev shortlist is slightly worse than a smaller one.</li>
+            <li>Every tested arm correctly abstains on all 5 impossible tasks.</li>
+          </ul>
+        </article>
+        <article class="info-card">
+          <h3>Interpretation</h3>
+          <ul class="bullet-list compact">
+            <li>Many Jev mistakes are textual look-alikes.</li>
+            <li>Jev does not receive the resolver's graph/type-fit structural signal.</li>
+            <li>This is not presented as a general verdict on Jev itself.</li>
+          </ul>
+        </article>
+      </div>
 
-<!-- ================= REPRODUCE ================= -->
-<section id="reproduce" class="section reproduce">
-  <div class="repro-inner reveal">
-    <h2>Fully reproducible</h2>
-    <p>
-      The artifact is deterministic and offline. A single command regenerates every result, and
-      12 conformance tests encode the protocol's normative requirements, several of which are direct
-      empirical checks of the theorems.
-    </p>
-    <div class="repro-badges">
-      <span class="rb">Deterministic</span>
-      <span class="rb">Offline</span>
-      <span class="rb">12 conformance tests</span>
-      <span class="rb">MIT licensed</span>
-      <span class="rb">Exact cl100k tokenization</span>
-    </div>
-  </div>
-</section>
+      <div class="details-stack">
+        <details class="detail-card" open>
+          <summary>
+            <span>T = 300 detailed per-arm breakdown</span>
+            <span class="detail-meta">with tag • no tag • shortlist recall • abstention</span>
+          </summary>
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">Detailed Jev results at T equals three hundred</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Arm</th>
+                  <th scope="col">hit@1</th>
+                  <th scope="col">with tag</th>
+                  <th scope="col">no tag</th>
+                  <th scope="col">gold in list</th>
+                  <th scope="col">conditional hit@1</th>
+                  <th scope="col">real-task abstain</th>
+                  <th scope="col">should-miss abstain</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">synapse8</th><td>0.633</td><td>0.758</td><td>0.292</td><td>0.878</td><td>0.722</td><td>0.156</td><td>5/5</td></tr>
+                <tr><th scope="row">synapse32</th><td>0.567</td><td>0.652</td><td>0.333</td><td>0.878</td><td>0.646</td><td>0.156</td><td>5/5</td></tr>
+                <tr><th scope="row">lexical32</th><td>0.578</td><td>0.606</td><td>0.500</td><td>1.000</td><td>0.578</td><td>0.033</td><td>5/5</td></tr>
+                <tr><th scope="row">synapse_only</th><td>0.811</td><td>0.909</td><td>0.542</td><td>0.878</td><td>0.924</td><td>0.122</td><td>5/5</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
 
-<!-- ================= CITE ================= -->
-<section id="cite" class="section">
-  <div class="section-head reveal">
-    <span class="eyebrow">Use this work</span>
-    <h2>Citation</h2>
-  </div>
-  <div class="cite-box reveal">
-    <button class="copy-btn" data-copy="bibtex">Copy</button>
-<pre id="bibtex"><code>@article{tripathy2026synapse,
-  title   = {SYNAPSE: Scale-Invariant Capability Activation for Large
-             Language Model Agents via a Capability Knowledge Graph},
+        <details class="detail-card" open>
+          <summary>
+            <span>T = 1000 detailed per-arm breakdown</span>
+            <span class="detail-meta">shortlist recall collapse is visible for lexical32</span>
+          </summary>
+          <div class="table-scroll">
+            <table>
+              <caption class="sr-only">Detailed Jev results at T equals one thousand</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Arm</th>
+                  <th scope="col">hit@1</th>
+                  <th scope="col">with tag</th>
+                  <th scope="col">no tag</th>
+                  <th scope="col">gold in list</th>
+                  <th scope="col">conditional hit@1</th>
+                  <th scope="col">real-task abstain</th>
+                  <th scope="col">should-miss abstain</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr><th scope="row">synapse8</th><td>0.411</td><td>0.530</td><td>0.083</td><td>0.900</td><td>0.457</td><td>0.122</td><td>5/5</td></tr>
+                <tr><th scope="row">synapse32</th><td>0.389</td><td>0.515</td><td>0.042</td><td>0.900</td><td>0.432</td><td>0.122</td><td>5/5</td></tr>
+                <tr><th scope="row">lexical32</th><td>0.100</td><td>0.136</td><td>0.000</td><td>0.233</td><td>0.429</td><td>0.200</td><td>5/5</td></tr>
+                <tr><th scope="row">synapse_only</th><td>0.822</td><td>0.909</td><td>0.583</td><td>0.900</td><td>0.914</td><td>0.100</td><td>5/5</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </details>
+
+        <details class="detail-card">
+          <summary>
+            <span>Error analysis when the gold capability was already in the shortlist</span>
+            <span class="detail-meta">look-alikes dominate Jev's misses</span>
+          </summary>
+          <div class="split-tables">
+            <div class="table-scroll">
+              <table>
+                <caption>T = 300 error analysis</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Arm</th>
+                    <th scope="col">Errors</th>
+                    <th scope="col">Look-alike</th>
+                    <th scope="col">Different capability</th>
+                    <th scope="col">Abstained</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><th scope="row">synapse8</th><td>22</td><td>11</td><td>8</td><td>3</td></tr>
+                  <tr><th scope="row">synapse32</th><td>28</td><td>18</td><td>7</td><td>3</td></tr>
+                  <tr><th scope="row">lexical32</th><td>38</td><td>23</td><td>12</td><td>3</td></tr>
+                  <tr><th scope="row">synapse_only</th><td>6</td><td>0</td><td>6</td><td>0</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="table-scroll">
+              <table>
+                <caption>T = 1000 error analysis</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">Arm</th>
+                    <th scope="col">Errors</th>
+                    <th scope="col">Look-alike</th>
+                    <th scope="col">Different capability</th>
+                    <th scope="col">Abstained</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr><th scope="row">synapse8</th><td>44</td><td>31</td><td>11</td><td>2</td></tr>
+                  <tr><th scope="row">synapse32</th><td>46</td><td>34</td><td>10</td><td>2</td></tr>
+                  <tr><th scope="row">lexical32</th><td>12</td><td>7</td><td>5</td><td>0</td></tr>
+                  <tr><th scope="row">synapse_only</th><td>7</td><td>0</td><td>7</td><td>0</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="card-grid card-grid-two">
+        <article class="info-card">
+          <h3>Why the reranker loses here</h3>
+          <p>
+            Jev often selects a textual look-alike because it only sees summaries, tags, and type strings,
+            while the resolver also benefits from graph structure and type-fit signals. That is the right
+            reading of the result here; it should not be generalized into a broad claim that Jev is worse
+            in every setting.
+          </p>
+        </article>
+        <article class="info-card">
+          <h3>Why lexical32 collapses at T = 1000</h3>
+          <p>
+            The main issue is shortlist recall. The gold capability appears in the lexical top-32 only 23%
+            of the time, so Jev cannot recover once the correct option is absent. When the gold is present,
+            lexical32 reaches 0.429 conditional hit@1.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="methodology" aria-labelledby="methodology-title">
+      <div class="section-heading">
+        <p class="eyebrow">Methodology and reproducibility</p>
+        <h2 id="methodology-title">What to trust, what to caveat, and how to reproduce it</h2>
+        <p>
+          This site intentionally keeps the caveats close to the results. The artifact is reproducible, but
+          the experiments still make bounded claims, especially for the new Jev baseline.
+        </p>
+      </div>
+
+      <div class="card-grid card-grid-two">
+        <article class="info-card">
+          <h3>Core limitations</h3>
+          <ul class="bullet-list">
+            <li>Synthetic catalogue rather than a production tool ecosystem.</li>
+            <li>Reference ANN path has wall-clock growth; the paper's claim is about prompt context, not this brute-force implementation's runtime.</li>
+            <li>Single benchmark framing with 90 real tasks and 5 impossible tasks.</li>
+            <li>Tag-withheld tasks remain the main source of SYNAPSE degradation.</li>
+          </ul>
+        </article>
+        <article class="info-card">
+          <h3>Jev experiment caveats</h3>
+          <ul class="bullet-list">
+            <li>One seed, two catalogue sizes, one prompt wording, and a synthetic catalogue.</li>
+            <li>The Jev-only full-catalog tournament was not completed because of upstream HTTP 429 rate limits.</li>
+            <li><code>PYTHONHASHSEED</code> tie sensitivity changes resolver outputs by roughly ±1 percentage point; the Jev exporter pins seed 0, but <code>run_all.py</code> currently does not.</li>
+            <li>Jev is not bit-deterministic, model alias/version is not pinned, and responses are cached and de-duplicated.</li>
+          </ul>
+        </article>
+      </div>
+
+      <div class="repro-grid">
+        <article class="data-card">
+          <div class="data-card-head">
+            <h3>Main artifact reproduction</h3>
+            <p>Generate the paper figures, benchmark CSVs, and site-linked assets</p>
+          </div>
+          <pre class="code-block"><code>pip install -r requirements.txt
+python run_all.py</code></pre>
+          <div class="data-card-head verification-head">
+            <h3>Verification</h3>
+            <p>Run the repository tests separately after reproduction.</p>
+          </div>
+          <pre class="code-block"><code>pytest -q tests/</code></pre>
+        </article>
+        <article class="data-card">
+          <div class="data-card-head">
+            <h3>Jev baseline reproduction</h3>
+            <p>Cached and offline-compatible once the bundled cache is unpacked</p>
+          </div>
+          <pre class="code-block"><code>cd experiments/jev
+npm ci
+python export_catalog.py --T 300 1000 --seeds 1
+node jev_bench.mjs --data data/T300_s1.json --arms synapse8,synapse32,lexical32
+node jev_bench.mjs --data data/T1000_s1.json --arms synapse8,synapse32,lexical32
+python summarize.py results/T300_s1_synapse8-synapse32-lexical32.json \
+  results/T1000_s1_synapse8-synapse32-lexical32.json</code></pre>
+        </article>
+      </div>
+    </section>
+
+    <section class="section cta-section" id="reproduce" aria-labelledby="reproduce-title">
+      <div class="section-heading narrow">
+        <p class="eyebrow">Source, paper, and data</p>
+        <h2 id="reproduce-title">Follow the evidence all the way back to the repo</h2>
+        <p>
+          The site is only a front door. The underlying source, paper, Jev experiment write-up, and full
+          summary tables all live in the repository and are linked directly here.
+        </p>
+      </div>
+
+      <div class="link-grid">
+        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener noreferrer">
+          <strong>Repository source</strong>
+          <span>Browse code, results, tests, and docs.</span>
+        </a>
+        <a class="link-card" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener noreferrer">
+          <strong>Paper PDF</strong>
+          <span>Read the main SYNAPSE manuscript.</span>
+        </a>
+        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE/blob/main/experiments/jev/README.md" target="_blank" rel="noopener noreferrer">
+          <strong>Jev experiment README</strong>
+          <span>Design, interpretation, and reproduction notes.</span>
+        </a>
+        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE/blob/main/experiments/jev/results/summary.md" target="_blank" rel="noopener noreferrer">
+          <strong>Full Jev summary</strong>
+          <span>Detailed tables and error analysis.</span>
+        </a>
+        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE/blob/main/README.md" target="_blank" rel="noopener noreferrer">
+          <strong>Reproduction instructions</strong>
+          <span>Main artifact commands and outputs.</span>
+        </a>
+        <a class="link-card" href="https://github.com/Debsasish/SYNAPSE/blob/main/paper/paper.md" target="_blank" rel="noopener noreferrer">
+          <strong>Readable paper source</strong>
+          <span>Open the Markdown paper text in GitHub.</span>
+        </a>
+      </div>
+    </section>
+
+    <section class="section citation-section" id="cite" aria-labelledby="cite-title">
+      <div class="section-heading narrow">
+        <p class="eyebrow">Citation and contact surface</p>
+        <h2 id="cite-title">Use the artifact responsibly</h2>
+        <p>
+          Cite the work, read the caveats, and inspect the repository if you want to build on the
+          protocol or compare against the Jev baseline in another setup.
+        </p>
+      </div>
+
+      <div class="citation-card">
+        <div>
+          <h3>Suggested citation</h3>
+          <pre class="code-block" id="citation-block"><code>@article{tripathy2026synapse,
+  title   = {SYNAPSE: Scale-Invariant Capability Activation for Large Language Model Agents via a Capability Knowledge Graph},
   author  = {Tripathy, Debasish},
   year    = {2026},
   url     = {https://github.com/Debsasish/SYNAPSE}
 }</code></pre>
-  </div>
-  <div class="cite-links reveal">
-    <a class="btn btn-primary" href="assets/SYNAPSE.pdf" target="_blank" rel="noopener">Download PDF (20 pp)</a>
-    <a class="btn" href="assets/SYNAPSE-latex.pdf" target="_blank" rel="noopener">LaTeX build (15 pp)</a>
-    <a class="btn" href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">GitHub Repository</a>
-  </div>
-</section>
+        </div>
+        <button class="button copy-button" type="button" data-copy-target="citation-block">Copy citation</button>
+      </div>
+    </section>
+  </main>
 
-<footer>
-  <div class="foot-inner">
+  <footer class="site-footer">
     <div>
-      <span class="brand-text">SYNAPSE</span>
-      <p>Scale-invariant capability activation for LLM agents.</p>
+      <p class="footer-mark">SYNAPSE</p>
+      <p class="footer-copy">Scale-invariant capability activation for LLM agents, presented as a static research site for GitHub Pages.</p>
     </div>
-    <div class="foot-links">
-      <a href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener">GitHub</a>
-      <a href="assets/SYNAPSE.pdf" target="_blank" rel="noopener">Paper</a>
-      <a href="#home">Top</a>
-    </div>
-  </div>
-  <p class="copyright">&copy; 2026 Debasish Tripathy &middot; MIT License</p>
-</footer>
+    <nav class="footer-nav" aria-label="Footer links">
+      <a href="#top">Top</a>
+      <a href="https://github.com/Debsasish/SYNAPSE" target="_blank" rel="noopener noreferrer">GitHub</a>
+      <a href="assets/SYNAPSE.pdf" target="_blank" rel="noopener noreferrer">Paper</a>
+      <a href="https://github.com/Debsasish/SYNAPSE/blob/main/experiments/jev/results/summary.md" target="_blank" rel="noopener noreferrer">Jev summary</a>
+    </nav>
+  </footer>
 
-<!-- Lightbox -->
-<div id="lightbox" aria-hidden="true">
-  <img id="lightbox-img" src="" alt="Enlarged figure" />
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js" integrity="sha384-XjKyOOlGwcjNTAIQHIpgOno0Hl1YQqzUOEleOLALmuqehneUG+vnGctmUb0ZY0l8" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
-<script src="script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>

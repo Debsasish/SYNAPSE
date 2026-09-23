@@ -80,6 +80,7 @@
     let dpr = 1;
     let nodes = [];
     let animationFrame = 0;
+    let resizeTimer = 0;
     let currentOffsetX = 0;
     let currentOffsetY = 0;
     let targetOffsetX = 0;
@@ -248,11 +249,14 @@
     };
 
     window.addEventListener("resize", () => {
-      if (shouldAnimate) {
-        resizeCanvas();
-      } else {
-        staticRender();
-      }
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        if (shouldAnimate) {
+          resizeCanvas();
+        } else {
+          staticRender();
+        }
+      }, 120);
     });
 
     hero.addEventListener("pointermove", handlePointer, { passive: true });

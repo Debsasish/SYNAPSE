@@ -527,11 +527,15 @@
         <article class="data-card">
           <div class="data-card-head">
             <h3>Main artifact reproduction</h3>
-            <p>Paper figures, benchmark CSVs, tests, and site-linked assets</p>
+            <p>Generate the paper figures, benchmark CSVs, and site-linked assets</p>
           </div>
           <pre class="code-block"><code>pip install -r requirements.txt
-python run_all.py
-pytest -q tests/</code></pre>
+python run_all.py</code></pre>
+          <div class="data-card-head verification-head">
+            <h3>Verification</h3>
+            <p>Run the repository tests separately after reproduction.</p>
+          </div>
+          <pre class="code-block"><code>pytest -q tests/</code></pre>
         </article>
         <article class="data-card">
           <div class="data-card-head">
